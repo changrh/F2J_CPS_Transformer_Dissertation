@@ -111,37 +111,42 @@ convertToCPS e = do
 	isTri <- isTrivial e
 	if isTri 
 		then do 
-			cps <- cpsify_trivial e (CPSVariable k)
+			cps <- epsilonE e (CPSVariable k)
 			return $ CPSAbstraction k $ cps  
 	else
 		do
 			cps <- cpsify_serious e (CPSVariable k)
 			return $ CPSAbstraction k $ cps 
 	---------------------CPS Trivial terms according to the paper--------------------
-cpsify_trivial :: EV -> CPS -> Compiler CPS
-cpsify_trivial e k = 
-	case e of 
-			EVariable var -> return (k @@ CPSVariable var)
-			EAbstraction argument body -> do
-								k1 <- gensym "%new-k"
-								isTri <- isTrivial body
-								if isTri 
-									then do
-										cps_body <- cpsify_trivial body k1
-										return (k @@ (CPSAbstraction argument $ CPSAbstraction k1 $ cps_body))
-								else 
-									do
-										cps_body <- cpsify_serious body k1
-										return (k @@ (CPSAbstraction argument $ CPSAbstraction k1 $ cps_body))
+--cpsify_trivial :: EV -> CPS -> Compiler CPS
+--cpsify_trivial e k = 
+--	case e of 
+--			EVariable var -> return (k @@ CPSVariable var)
+--			EAbstraction argument body -> do
+--								k1 <- gensym "%new-k"
+--								isTri <- isTrivial body
+--								if isTri 
+--									then do
+--										cps_body <- cpsify_trivial body k1
+--										return (k @@ (CPSAbstraction argument $ CPSAbstraction k1 $ cps_body))
+--								else 
+--									do
+--										cps_body <- cpsify_serious body k1
+--										return (k @@ (CPSAbstraction argument $ CPSAbstraction k1 $ cps_body))
 								  
 
 
 -----------------------Function epsilonE----------------------------------------------
-epsilonE :: EV -> CPS -> 
-
-------------------------Function Serious----------------------------------------------
---seriousE :: 
-
+epsilonE :: EV -> CPS -> Compiler CPS 
+epsilonE e k = do
+	istri <- isTrivial e  
+	if istri 
+		then do 
+			trivial_term <- trivialE e
+			return (k @@ trivial_term)
+	else do
+		computations <- cpsify_serious e k
+		return computations
 ------------------------Function Trivial--------------------------------------------
 trivialE :: EV -> Compiler CPS
 trivialE e =
@@ -149,14 +154,17 @@ trivialE e =
 		EVariable var -> return $ CPSVariable var 
 		EAbstraction argument body -> do
 			k <- gensym "%new-k"
-			cps_body <- epsilonE body k
+			cps_body <- epsilonE body $ CPSVariable k
 			return $ CPSAbstraction argument $ CPSAbstraction k $ cps_body
 
 -----------------------CPS Serious Terms according to the paper--------------------
 cpsify_serious :: EV -> CPS -> Compiler CPS
 cpsify_serious e k = 
 	case e of 
-		EApplication exp1 exp2 -> case (isTrivial exp1, isTrivial exp2) of
+		EApplication exp1 exp2 -> do
+			bool_value1 <- isTrivial exp1
+			bool_value2 <- isTrivial exp2 
+			case (bool_value1, bool_value2) of
 									(True, True) -> do 
 										exp1_temp <- trivialE exp1
 										exp2_temp <- trivialE exp2
@@ -164,19 +172,20 @@ cpsify_serious e k =
 									(True, False) -> do
 										exp1_temp <- trivialE exp1
 										x1 <- gensym "%new-x1"
-										new_continuation <- return $ CPSAbstraction x1 $ (exp1_temp @@ x1 @ k)
-										return $ cpsify_serious exp2 $ new_continuation 
+										new_continuation <- return $ CPSAbstraction x1 (exp1_temp @@ CPSVariable x1 @@ k)
+										cpsify_serious exp2 $ new_continuation 
 									(False, True) -> do
 										exp2_temp <- trivialE exp2
 										x0 <- gensym "%new-x0"
-										new_continuation <- return $ CPSAbstraction x0 $ (x0 @@ exp2_temp @@ k)
-										return $ cpsify_serious exp1 $ new_continuation
+										new_continuation <- return $ CPSAbstraction x0 (CPSVariable x0 @@ exp2_temp @@ k)
+										cpsify_serious exp1 $ new_continuation
 									(False, False) -> do
 										x0 <- gensym "%new-x0"
 										x1 <- gensym "%new-x1"
-										inner_new_continuation <- CPSAbstraction x1 $ (x0 @@ x1 @@ k)
-										new_continuation <- CPSAbstraction x0 $ cpsify_serious exp2 $ inner_new_continuation
-										return $ cpsify_serious exp1 $ new_continuation
+										inner_new_continuation <- return $ CPSAbstraction x1 (CPSVariable x0 @@ CPSVariable x1 @@ k)
+										cpsed_expr2 <- cpsify_serious exp2 inner_new_continuation
+										new_continuation <- return $ CPSAbstraction x0 cpsed_expr2
+										cpsify_serious exp1 $ new_continuation
 			
 
 
