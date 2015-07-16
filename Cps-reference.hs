@@ -117,24 +117,6 @@ convertToCPS e = do
 		do
 			cps <- cpsify_serious e (CPSVariable k)
 			return $ CPSAbstraction k $ cps 
-	---------------------CPS Trivial terms according to the paper--------------------
---cpsify_trivial :: EV -> CPS -> Compiler CPS
---cpsify_trivial e k = 
---	case e of 
---			EVariable var -> return (k @@ CPSVariable var)
---			EAbstraction argument body -> do
---								k1 <- gensym "%new-k"
---								isTri <- isTrivial body
---								if isTri 
---									then do
---										cps_body <- cpsify_trivial body k1
---										return (k @@ (CPSAbstraction argument $ CPSAbstraction k1 $ cps_body))
---								else 
---									do
---										cps_body <- cpsify_serious body k1
---										return (k @@ (CPSAbstraction argument $ CPSAbstraction k1 $ cps_body))
-								  
-
 
 -----------------------Function epsilonE----------------------------------------------
 epsilonE :: EV -> CPS -> Compiler CPS 
@@ -165,27 +147,37 @@ cpsify_serious e k =
 			bool_value1 <- isTrivial exp1
 			bool_value2 <- isTrivial exp2 
 			case (bool_value1, bool_value2) of
-									(True, True) -> do 
-										exp1_temp <- trivialE exp1
-										exp2_temp <- trivialE exp2
-										return ((exp1_temp @@ exp2_temp) @@ k)
-									(True, False) -> do
-										exp1_temp <- trivialE exp1
-										x1 <- gensym "%new-x1"
-										new_continuation <- return $ CPSAbstraction x1 (exp1_temp @@ CPSVariable x1 @@ k)
-										cpsify_serious exp2 $ new_continuation 
-									(False, True) -> do
-										exp2_temp <- trivialE exp2
-										x0 <- gensym "%new-x0"
-										new_continuation <- return $ CPSAbstraction x0 (CPSVariable x0 @@ exp2_temp @@ k)
-										cpsify_serious exp1 $ new_continuation
-									(False, False) -> do
-										x0 <- gensym "%new-x0"
-										x1 <- gensym "%new-x1"
-										inner_new_continuation <- return $ CPSAbstraction x1 (CPSVariable x0 @@ CPSVariable x1 @@ k)
-										cpsed_expr2 <- cpsify_serious exp2 inner_new_continuation
-										new_continuation <- return $ CPSAbstraction x0 cpsed_expr2
-										cpsify_serious exp1 $ new_continuation
-			
+				(True, True) -> do 
+					exp1_temp <- trivialE exp1
+					exp2_temp <- trivialE exp2
+					return ((exp1_temp @@ exp2_temp) @@ k)
+				(True, False) -> do
+					exp1_temp <- trivialE exp1
+					x1 <- gensym "%new-x1"
+					new_continuation <- return $ CPSAbstraction x1 (exp1_temp @@ CPSVariable x1 @@ k)
+					cpsify_serious exp2 $ new_continuation 
+				(False, True) -> do
+					exp2_temp <- trivialE exp2
+					x0 <- gensym "%new-x0"
+					new_continuation <- return $ CPSAbstraction x0 (CPSVariable x0 @@ exp2_temp @@ k)
+					cpsify_serious exp1 $ new_continuation
+				(False, False) -> do
+					x0 <- gensym "%new-x0"
+					x1 <- gensym "%new-x1"
+					inner_new_continuation <- return $ CPSAbstraction x1 (CPSVariable x0 @@ CPSVariable x1 @@ k)
+					cpsed_expr2 <- cpsify_serious exp2 inner_new_continuation
+					new_continuation <- return $ CPSAbstraction x0 cpsed_expr2
+					cpsify_serious exp1 $ new_continuation	
 
+-----------------------These functions are just used for printing out test cases' results------------------
+linkAll :: Compiler EV -> Compiler CPS
+linkAll x = do 
+	expression <- x
+	convertToCPS expression
 
+convertToIO :: Compiler CPS -> IO ()
+convertToIO x = print $ runCompiler x
+
+main =
+	convertToIO $ linkAll $ giveVariableUniqueIDs $ EApplication (EAbstraction "x" (EAbstraction "y" (EApplication (EVariable "x") (EVariable "y"))))  (EAbstraction "w" (EVariable "w"))
+	
