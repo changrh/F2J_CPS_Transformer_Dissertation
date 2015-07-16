@@ -117,8 +117,21 @@ convertToCPS e = do
 			cps <- cpsify-serious e (CPSVariable k)
 	return $ CPSAbstraction k $ cps 
 ---------------------CPS Trivial terms according to the paper--------------------
-cpsify-trivial :: 
+cpsify-trivial :: EV -> CPS -> Compiler CPS
+cpsify-trivial e k = case e of 
+						EVariable var -> return (k @@ CPSVariable var)
+						EAbstraction argument body -> do
+														k1 <- gensym "%new-k"
+														isTri <- isTrivial body
+														if isTri 
+															then do
+																cps-body <- cpsify-trivial body k1
+														else 
+															do
+																cps-body <- cpsify-serious body k1
+														return (k @@ (CPSAbstraction argument $ CPSAbstraction k1 $ cps-body))  
 
 ---------------------CPS Serious Terms according to the paper--------------------
-cpsify-serious ::
+cpsify-serious :: EV -> CPS -> Compiler CPS
+
 
