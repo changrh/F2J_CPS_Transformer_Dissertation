@@ -121,7 +121,7 @@ cpsify-trivial :: EV -> CPS -> Compiler CPS
 cpsify-trivial e k = case e of 
 						EVariable var -> return (k @@ CPSVariable var)
 						EAbstraction argument body -> do
-														k1 <- gensym "%new-k"
+                                                        k1 <- gensym "%new-k"
 														isTri <- isTrivial body
 														if isTri 
 															then do
