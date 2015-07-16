@@ -8,6 +8,9 @@ import Control.Monad.State
 import Control.Monad.Error
 import Control.Monad.Identity
 
+import System.Random
+import System.IO.Unsafe
+
 import qualified Data.Map as Map
 
 data E v = EVariable v
@@ -57,6 +60,12 @@ newtype Compiler a = Compiler {runC :: ErrorT CompilerError (State CompilerState
 
 instance Error CompilerError where
 	strMsg = XInternalError
+
+
+----------------------randomStr is used to generate random string-----------------------
+randomStr :: String
+randomStr = take 6 $ randomRs ('a','z') $ unsafePerformIO newStdGen
+
 
 runCompiler :: Compiler a -> Either CompilerError a
 runCompiler x = evalState (runErrorT (runC x)) state
@@ -108,15 +117,8 @@ isTrivial _ = return True
 convertToCPS :: EV -> Compiler CPS
 convertToCPS e = do
 	k <- gensym "%root-k"
-	isTri <- isTrivial e
-	if isTri 
-		then do 
-			cps <- epsilonE e (CPSVariable k)
-			return $ CPSAbstraction k $ cps  
-	else
-		do
-			cps <- cpsify_serious e (CPSVariable k)
-			return $ CPSAbstraction k $ cps 
+	cps <- epsilonE e (CPSVariable k)
+	return $ CPSAbstraction k $ cps  
 
 -----------------------Function epsilonE----------------------------------------------
 epsilonE :: EV -> CPS -> Compiler CPS 
@@ -135,7 +137,7 @@ trivialE e =
 	case e of
 		EVariable var -> return $ CPSVariable var 
 		EAbstraction argument body -> do
-			k <- gensym "%new-k"
+			k <- gensym randomStr
 			cps_body <- epsilonE body $ CPSVariable k
 			return $ CPSAbstraction argument $ CPSAbstraction k $ cps_body
 
@@ -153,17 +155,17 @@ cpsify_serious e k =
 					return ((exp1_temp @@ exp2_temp) @@ k)
 				(True, False) -> do
 					exp1_temp <- trivialE exp1
-					x1 <- gensym "%new-x1"
+					x1 <- gensym randomStr
 					new_continuation <- return $ CPSAbstraction x1 (exp1_temp @@ CPSVariable x1 @@ k)
 					cpsify_serious exp2 $ new_continuation 
 				(False, True) -> do
 					exp2_temp <- trivialE exp2
-					x0 <- gensym "%new-x0"
+					x0 <- gensym randomStr
 					new_continuation <- return $ CPSAbstraction x0 (CPSVariable x0 @@ exp2_temp @@ k)
 					cpsify_serious exp1 $ new_continuation
 				(False, False) -> do
-					x0 <- gensym "%new-x0"
-					x1 <- gensym "%new-x1"
+					x0 <- gensym randomStr
+					x1 <- gensym randomStr
 					inner_new_continuation <- return $ CPSAbstraction x1 (CPSVariable x0 @@ CPSVariable x1 @@ k)
 					cpsed_expr2 <- cpsify_serious exp2 inner_new_continuation
 					new_continuation <- return $ CPSAbstraction x0 cpsed_expr2
