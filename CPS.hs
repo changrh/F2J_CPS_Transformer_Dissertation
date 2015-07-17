@@ -8,17 +8,16 @@ import Control.Monad.Identity
 import qualified Data.Map as Map
 
 import System.Random
-
+---------------------------Note : No pretty print for polymorphic expression -------------
 data Expr e = Var e
-			      | Lam e (e -> Expr e)
-			      | App (Expr e) (Expr e)
-            | Lit
-
-instance Show (Expr e) where
-  show (Var v) = show "Var " ++ show v
-  --show (Lam argument body) = show "Lam " ++ show argument ++ show body
-  --show App exp1 exp2 = show "App " ++ show exp1 ++ " " ++ show exp2
-  --show Lit = show "Lit"
+      | Lam e (e -> Expr e)  -----------------Lam argument body where body is a haskell function waiting for one argument
+      | App (Expr e) (Expr e)
+      | Lit
+--instance Show (Expr e) where
+--  show (Var v) = show "Var " ++ show v
+--  show (Lam argument body) = show "Lam " ++ show argument ++ show body？？
+--  show (App exp1 exp2) = show "App " ++ show exp1 ++ " " ++ show exp2
+--  show Lit = show "Lit"
 
 type Name = String
 
