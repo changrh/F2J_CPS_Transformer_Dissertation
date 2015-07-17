@@ -16,7 +16,7 @@ import qualified Data.Map as Map
 data E v = EVariable v
 		 | EAbstraction v (E v)
 		 | EApplication (E v) (E v)
-		 | EPrimitive Integer
+		 | EPrimitive Int
 		 deriving (Show)
 
 
@@ -27,15 +27,13 @@ instance Num (E v) where
 	(*) (EPrimitive x1) (EPrimitive x2) = EPrimitive (x1 * x2)
 	negate (EPrimitive x) = EPrimitive $ negate x
 	abs (EPrimitive x) = EPrimitive $ abs x
-	fromInteger x = EPrimitive x 
-
 
 
 type ES = E String
 type EV = E Variable
 
 --------------------------Variable with Unique ID--------------------------------
-data Variable = MkVariable { variableID   :: Integer,
+data Variable = MkVariable { variableID   :: Int,
 							 variableName :: String }
 	deriving (Eq, Data, Typeable, Show)
 
@@ -43,11 +41,11 @@ data Variable = MkVariable { variableID   :: Integer,
 data CPS = CPSVariable Variable
 		 | CPSAbstraction Variable CPS
 		 | CPSApplication CPS CPS
-		 | CPSPrimitive Integer
+		 | CPSPrimitive Int
 	deriving (Eq, Data, Typeable, Show)
 
 
-data CompilerState = CompilerState { csNextGensymID :: Integer }
+data CompilerState = CompilerState { csNextGensymID :: Int }
 
 data CompilerError = XUnboundVariable String 
 				   | XInternalError String
@@ -57,14 +55,17 @@ data CompilerError = XUnboundVariable String
 newtype Compiler a = Compiler {runC :: ErrorT CompilerError (State CompilerState) a}
     deriving (Monad, MonadState CompilerState, MonadError CompilerError)
 
+--instance (Error e, MonadIO m) => MonadIO (ErrorT e m) where
+--	liftIO = lift . liftIO
+
 
 instance Error CompilerError where
 	strMsg = XInternalError
 
 
 ----------------------randomStr is used to generate random string-----------------------
-randomStr :: String
-randomStr = take 6 $ randomRs ('a','z') $ unsafePerformIO newStdGen
+randomStr :: Int -> String
+randomStr seed = take 6 . randomRs ('a','z') $ (mkStdGen seed)
 
 
 runCompiler :: Compiler a -> Either CompilerError a
@@ -78,11 +79,17 @@ withBidings m xs = Map.union (Map.fromList xs) m
 
 --------------------Generate a fresh variable with the given name.------------------
 
-gensym :: String -> Compiler Variable
-gensym name = do 
-				 i <- gets csNextGensymID 
-				 modify (\s -> s {csNextGensymID = i + 1})
-				 return (MkVariable i name)
+--gensym :: String -> Compiler Variable
+--gensym name = do 
+--				 i <- gets csNextGensymID 
+--				 modify (\s -> s {csNextGensymID = i + 1})
+--				 return (MkVariable i name)
+
+gensym :: Compiler Variable
+gensym = do 
+		 i <- gets csNextGensymID 
+		 modify (\s -> s {csNextGensymID = i + 1})
+		 return (MkVariable i (randomStr i))
 
 --------------------Assign Unique ID to every lexical variable----------------------
 giveVariableUniqueIDs :: ES -> Compiler EV
@@ -95,7 +102,7 @@ giveVariableUniqueIDs = f Map.empty
    			        Nothing -> throwError $ XUnboundVariable var
    			        Just var' -> return $ EVariable var'
    			EAbstraction argument body -> do
-   				argument' <- gensym argument
+   				argument' <- gensym
    				body' <- f (renamings `withBidings` (zip (argument:[]) (argument':[]))) body
    				return $ EAbstraction argument' body'
    			EApplication exp1 exp2  -> 
@@ -116,7 +123,7 @@ isTrivial _ = return True
 ---------------------Convert an input expression to Continuation Passing Style--------
 convertToCPS :: EV -> Compiler CPS
 convertToCPS e = do
-	k <- gensym "%root-k"
+	k <- gensym
 	cps <- epsilonE e (CPSVariable k)
 	return $ CPSAbstraction k $ cps  
 
@@ -137,7 +144,7 @@ trivialE e =
 	case e of
 		EVariable var -> return $ CPSVariable var 
 		EAbstraction argument body -> do
-			k <- gensym randomStr
+			k <- gensym
 			cps_body <- epsilonE body $ CPSVariable k
 			return $ CPSAbstraction argument $ CPSAbstraction k $ cps_body
 
@@ -155,17 +162,17 @@ cpsify_serious e k =
 					return ((exp1_temp @@ exp2_temp) @@ k)
 				(True, False) -> do
 					exp1_temp <- trivialE exp1
-					x1 <- gensym randomStr
+					x1 <- gensym
 					new_continuation <- return $ CPSAbstraction x1 (exp1_temp @@ CPSVariable x1 @@ k)
 					cpsify_serious exp2 $ new_continuation 
 				(False, True) -> do
 					exp2_temp <- trivialE exp2
-					x0 <- gensym randomStr
+					x0 <- gensym 
 					new_continuation <- return $ CPSAbstraction x0 (CPSVariable x0 @@ exp2_temp @@ k)
 					cpsify_serious exp1 $ new_continuation
 				(False, False) -> do
-					x0 <- gensym randomStr
-					x1 <- gensym randomStr
+					x0 <- gensym
+					x1 <- gensym
 					inner_new_continuation <- return $ CPSAbstraction x1 (CPSVariable x0 @@ CPSVariable x1 @@ k)
 					cpsed_expr2 <- cpsify_serious exp2 inner_new_continuation
 					new_continuation <- return $ CPSAbstraction x0 cpsed_expr2
