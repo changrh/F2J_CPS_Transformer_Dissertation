@@ -9,7 +9,6 @@ import Control.Monad.Error
 import Control.Monad.Identity
 
 import System.Random
-import System.IO.Unsafe
 
 import qualified Data.Map as Map
 
