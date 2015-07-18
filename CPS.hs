@@ -31,6 +31,8 @@ type VariableID = Int
 type VariableName = String
 type VarEnv = Map.Map VariableID VariableName
 
+type Index = Int
+
 ------------Define a state data type to count the unique ID of each variable-------------
 
 data CompilerState = CompilerState { nextGensymID :: VariableID,
@@ -57,11 +59,37 @@ randomStr :: Int -> String
 randomStr seed = take 6 . randomRs ('a','z') $ (mkStdGen seed)
 
 --Generate fresh variable accoding to the unique ID to make sure every variable is unique---
-genSym :: Compiler (Expr Name)
+genSym :: Compiler (Expr Index)
 genSym = do
   i <- gets nextGensymID
   currentVarMap <- gets allGensyms
   modify (\s -> s { nextGensymID = i+1, allGensyms = (Map.insert (i+1) (randomStr (i+1)) currentVarMap) })
-  return $ Var (randomStr (i + 1))
+  return $ Var i--------------?????
+---------------------Assign Unique ID to every lexical variable------------------------
+giveVariableUniqueIDs :: Expr e -> Compiler (Expr Index)
+giveVariableUniqueIDs expression = 
+  case expression of 
+    Var var -> do
+      currentVarMap <- gets allGensyms
+      case Map.lookup var currentVarMap of
+        Nothing -> 
+        Just var' -> 
 
+    Lam argument fbody -> do
+      argument' <- genSym argument
+      body' <- giveVariableUniqueIDs (body argument)-----problem ??? e -> Expr e , how to CPS this??
+      return $ Lam argument' body'
 
+    App exp1 exp2 -> do
+      cpsed_exp1 <- giveVariableUniqueIDs exp1
+      cpsed_exp2 <- giveVariableUniqueIDs exp2
+      return $ App cpsed_exp1 cpsed_exp2
+      
+    Lit -> return Lit
+
+------------------------Check Validation-----------------
+--checkValid :: Expr Name -> Expr Name
+--checkValid expression = 
+--  case expression of 
+--    Var var -> Var "adasdsa"
+--    Lam argument body -> Lam "asdas" (\x -> Var "asdasd")
