@@ -51,8 +51,7 @@ data CompilerError = XUnboundVariable String
 				   | XInsaneCPS CPS
 		deriving (Show)
 
-newtype Compiler a = Compiler {runC :: ErrorT CompilerError (State CompilerState) a}
-    deriving (Monad, MonadState CompilerState, MonadError CompilerError)
+type Compiler a = ErrorT CompilerError (State CompilerState) a
 
 --instance (Error e, MonadIO m) => MonadIO (ErrorT e m) where
 --	liftIO = lift . liftIO
@@ -68,7 +67,7 @@ randomStr seed = take 6 . randomRs ('a','z') $ (mkStdGen seed)
 
 
 runCompiler :: Compiler a -> Either CompilerError a
-runCompiler x = evalState (runErrorT (runC x)) state
+runCompiler x = evalState (runErrorT x) state
 	where state = CompilerState { csNextGensymID = 0 }
 
 ------------------Add mapping to Map-----------------------------------------------
