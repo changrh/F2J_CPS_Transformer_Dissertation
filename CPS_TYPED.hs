@@ -59,7 +59,7 @@ data Exp
   | Let (String, Type) Exp Exp
   deriving (Eq, Show)
 
-------------------------All The Type Checker For SystemF---------------------------------------------
+------------------------All The Type Checker For SystemF----------------------
 
 type TEnv = [(String, Type)]
 
@@ -171,27 +171,38 @@ data N_Type = N_TVar Name
 ---------------According to https://www.cs.princeton.edu/~dpw/papers/tal-toplas.pdf
 --           | N_Let Declaration N_Exp
 --------------- Still missing part in the paper v[T](V), need to discuss with people
+type Paramter = String
+type TypePara = String
 
 data N_Value = N_Var Name
              | N_Lit Lit
-             | N_Fix String [Name] [(N_Value, N_Type)] N_Exp
+             | N_Fix String [TypePara] [(Paramter, N_Type)] N_Exp
+           ----Fix x [a] (X1:T1,.....Xn:Tn). e
+           ----TypePara is a type argument used in N_Type in the binder
+           ----Parameter is a String, which indicates a corresponding N_Value in the Fix Body  
              | N_Tuple [N_Value]
 
 
 ------------------In Declaration N_Value should be N_Var Name---------------
 data Declaration = Declare_V N_Value  Annotated_V
+            ------- x = v  
                  | Declare_T N_Value Int Annotated_V
+            ------- x = Proj Int Tuple [N_Value]
                  | Declare_O N_Value Annotated_V Operator Annotated_V
-
+            ------- x = v1 Op v2
 
 data N_Exp = N_Let Declaration N_Exp
+        -----Let d in e 
            | N_If N_Value N_Exp N_Exp
-           | N_App [N_Type] [Annotated_V]
+        -----If (v, e1, e2)
+           | N_App Annotated_V Annotated_V
+        -----N_App Fix [Type_Arguments] [(parameter, parameter_type)] Not Sure About this term here ????  
+        -----N_App N_Value [N_Type] [(String, N_Type)]       
            | N_Halt Annotated_V
+        -----Halt [T] V   
+
 
 data Annotated_V = Annotated_V N_Value N_Type
-
-
 
 ------------------------------CPS Transformation from SystemF to CSPK----------------------------------
 
@@ -210,8 +221,8 @@ cpsTransType (TupleType (x:xs))    = N_TupleType (cpsTransType(x) : subList xs)
 cpsTransCont :: Type -> N_Type
 cpsTransCont tp = N_Fun [cpsTransType(tp)] N_Void
 
---cpsTransExp :: Annotated_F -> Annotated_K -> Maybe N_Exp
---cpsTransExp (Annotated_F (Var name) tp) cont                   = Just (N_Fix cont (Annotated_K (N_Var name) (cpsTransType tp)) ) 
+cpsTransExp :: Annotated_F -> Annotated_V -> Maybe N_Exp
+cpsTransExp (Annotated_F (Var name) tp) cont                   = Just (N_App cont (Annotated_V (N_Var name) (cpsTransType tp)) ) 
 --cpsTransExp (Annotated_F (Lit n) tp) cont                      = Just (N_App cont (Annotated_K (N_Lit n) (cpsTransType tp)) ) 
 --cpsTransExp (Annotated_F (BLam name e) tp) cont                = case tp of 
 --                                                                    Forall n t -> (let c_tp = cpsTransCont t
