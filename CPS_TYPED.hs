@@ -59,22 +59,6 @@ data Exp
   | Let (String, Type) Exp Exp
   deriving (Eq, Show)
 
-cpsTransExp :: Annotated_F -> K_Exp
-cpsTransExp Annotated_F (Var name) tp                   = 
-cpsTransExp Annotated_F (Lit n) tp                      = 
-cpsTransExp Annotated_F (BLam name e) tp                = 
-cpsTransExp Annotated_F (App e1 e2) tp                  =  
-cpsTransExp Annotated_F (Fix name (n, n_tp) e1 e2) tp   = 
-cpsTransExp Annotated_F (TApp e e_tp) tp                =
-cpsTransExp Annotated_F (Tuple xs) tp                   =
-cpsTransExp Annotated_F (Proj index e) tp               =
-cpsTransExp Annotated_F (PrimOp e1 op e2) tp            =
-cpsTransExp Annotated_F (If e1 e2 e3) tp                = 
---cpsTransExp Annotated_F (Lam (n,n_tp) e) tp             = 
---cpsTransExp Annotated_F (Let (n, n_tp) e1 e2) tp        = 
-
-
-
 ------------------------All The Type Checker For SystemF---------------------------------------------
 
 type TEnv = [(String, Type)]
@@ -209,4 +193,16 @@ cpsTransCont :: Type -> K_Type
 cpsTransCont tp = K_Fun [cpsTransType(tp)] K_Void
 
 cpsTransExp :: Annotated_F -> K_Exp
-cpsTransExp Annotated_F 
+cpsTransExp Annotated_F (Var name) tp                   = 
+cpsTransExp Annotated_F (Lit n) tp                      = 
+cpsTransExp Annotated_F (BLam name e) tp                = 
+cpsTransExp Annotated_F (App e1 e2) tp                  =  
+cpsTransExp Annotated_F (Fix name (n, n_tp) e1 e2) tp   = 
+cpsTransExp Annotated_F (TApp e e_tp) tp                =
+cpsTransExp Annotated_F (Tuple xs) tp                   =
+cpsTransExp Annotated_F (Proj index e) tp               =
+cpsTransExp Annotated_F (PrimOp e1 op e2) tp            =
+cpsTransExp Annotated_F (If e1 e2 e3) tp                = 
+--cpsTransExp Annotated_F (Lam (n,n_tp) e) tp             = 
+--cpsTransExp Annotated_F (Let (n, n_tp) e1 e2) tp        = 
+
