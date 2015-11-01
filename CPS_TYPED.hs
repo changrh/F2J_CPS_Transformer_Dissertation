@@ -147,62 +147,85 @@ data Annotated_F = Annotated_F Exp Type
 --------------------------------Define CPSK data type ------------------------------------------------
 
 -- CPSK Types.
-data K_Type = K_TVar Name
-            | K_Void
-            | K_Fun [K_Type] K_Type
-            | K_TupleType [K_Type]
-            | K_Forall [Name] K_Type
---------------Forall [Type_Arguments] K_Fun [K_Type] K_Void
+data N_Type = N_TVar Name
+            | N_Void
+            | N_Fun [N_Type] N_Type
+            | N_TupleType [N_Type]
+            | N_Forall [Name] N_Type
+--------------Forall [Type_Arguments] N_Fun [N_Type] N_Void
 --------------Forall must follow the above rule
-            | K_Unit
-            | K_JClass Name
+            | N_Unit
+            | N_JClass Name
 
 
-data K_Exp = K_Var Name
-           | K_Lit Lit
-           | K_Tuple [K_Exp]
-           | K_If K_Exp K_Exp K_Exp
-           | K_App K_Exp K_Exp
-           | K_Proj Int K_Exp
-           | K_PrimOp K_Exp Operator K_Exp
-           | K_Halt Annotated_K
-           | K_Fix String [Name] [(K_Exp, K_Type)] K_Exp
--------------Fix Function_name [Type_Arguments] [(Parameter, Parameter_Type)] Function_Body
--------------According to https://www.cs.princeton.edu/~dpw/papers/tal-toplas.pdf
-           | K_Let Declaration K_Exp
-------------- Still missing part in the paper v[T](V), need to discuss with people
+--data N_Exp = N_Var Name
+--           | N_Lit Lit
+--           | N_Tuple [N_Exp]
+--           | N_If N_Exp N_Exp N_Exp
+--           | N_App Annotated_K Annotated_K
+--           | N_Proj Int N_Exp
+--           | N_PrimOp N_Exp Operator N_Exp
+--           | N_Halt Annotated_K
+--           | N_Fix String [Name] [(N_Exp, N_Type)] N_Exp
+---------------Fix Function_name [Type_Arguments] [(Parameter, Parameter_Type)] Function_Body
+---------------According to https://www.cs.princeton.edu/~dpw/papers/tal-toplas.pdf
+--           | N_Let Declaration N_Exp
+--------------- Still missing part in the paper v[T](V), need to discuss with people
 
-data Declaration = Declare Name Annotated_K
-data Annotated_K = Annotated_K K_Exp K_Type
+data N_Value = N_Var Name
+             | N_Lit Lit
+             | N_Fix String [Name] [(N_Value, N_Type)] N_Exp
+             | N_Tuple [N_Value]
+
+
+------------------In Declaration N_Value should be N_Var Name---------------
+data Declaration = Declare_V N_Value  Annotated_V
+                 | Declare_T N_Value Int Annotated_V
+                 | Declare_O N_Value Annotated_V Operator Annotated_V
+
+
+data N_Exp = N_Let Declaration N_Exp
+           | N_If N_Value N_Exp N_Exp
+           | N_App [N_Type] [Annotated_V]
+           | N_Halt Annotated_V
+
+data Annotated_V = Annotated_V N_Value N_Type
+
+
 
 ------------------------------CPS Transformation from SystemF to CSPK----------------------------------
 
-cpsTransType :: Type -> K_Type
-cpsTransType (TVar name)           = K_TVar name
+cpsTransType :: Type -> N_Type
+cpsTransType (TVar name)           = N_TVar name
 
-cpsTransType (JClass name)         = K_JClass name
-cpsTransType  Unit                 = K_Unit
-cpsTransType (Fun t1 t2)           = K_Fun [cpsTransType(t1), cpsTransCont(t2)] K_Void 
-cpsTransType (Forall name tp)      = K_Forall [name] (K_Fun [cpsTransCont(tp)] K_Void)
-cpsTransType (TupleType (x:xs))    = K_TupleType (cpsTransType(x) : subList xs)
+cpsTransType (JClass name)         = N_JClass name
+cpsTransType  Unit                 = N_Unit
+cpsTransType (Fun t1 t2)           = N_Fun [cpsTransType(t1), cpsTransCont(t2)] N_Void 
+cpsTransType (Forall name tp)      = N_Forall [name] (N_Fun [cpsTransCont(tp)] N_Void)
+cpsTransType (TupleType (x:xs))    = N_TupleType (cpsTransType(x) : subList xs)
                                     where subList xs = case xs of 
                                                         [] -> []
                                                         (y:ys) -> (cpsTransType y) : (subList ys)
 
-cpsTransCont :: Type -> K_Type
-cpsTransCont tp = K_Fun [cpsTransType(tp)] K_Void
+cpsTransCont :: Type -> N_Type
+cpsTransCont tp = N_Fun [cpsTransType(tp)] N_Void
 
-cpsTransExp :: Annotated_F -> K_Exp
-cpsTransExp Annotated_F (Var name) tp                   = 
-cpsTransExp Annotated_F (Lit n) tp                      = 
-cpsTransExp Annotated_F (BLam name e) tp                = 
-cpsTransExp Annotated_F (App e1 e2) tp                  =  
-cpsTransExp Annotated_F (Fix name (n, n_tp) e1 e2) tp   = 
-cpsTransExp Annotated_F (TApp e e_tp) tp                =
-cpsTransExp Annotated_F (Tuple xs) tp                   =
-cpsTransExp Annotated_F (Proj index e) tp               =
-cpsTransExp Annotated_F (PrimOp e1 op e2) tp            =
-cpsTransExp Annotated_F (If e1 e2 e3) tp                = 
---cpsTransExp Annotated_F (Lam (n,n_tp) e) tp             = 
---cpsTransExp Annotated_F (Let (n, n_tp) e1 e2) tp        = 
+--cpsTransExp :: Annotated_F -> Annotated_K -> Maybe N_Exp
+--cpsTransExp (Annotated_F (Var name) tp) cont                   = Just (N_Fix cont (Annotated_K (N_Var name) (cpsTransType tp)) ) 
+--cpsTransExp (Annotated_F (Lit n) tp) cont                      = Just (N_App cont (Annotated_K (N_Lit n) (cpsTransType tp)) ) 
+--cpsTransExp (Annotated_F (BLam name e) tp) cont                = case tp of 
+--                                                                    Forall n t -> (let c_tp = cpsTransCont t
+--                                                                                       exp_tp = cpsTransType tp
+--                                                                                       exp = N_Fix "BLam" [name] [(N_Var "c", c_tp)] (fromJust (cpsTransExp (Annotated_F e t) (Annotated_K (N_Var "c") c_tp)) )                                                                                  
+--                                                                                  in Just (N_App cont (Annotated_K exp exp_tp)) )
+--                                                                    _ -> Nothing
+--cpsTransExp (Annotated_F (App e1 e2) tp) cont                  =  
+----cpsTransExp (Annotated_F (Fix name (n, n_tp) e1 e2) tp) cont   = 
+----cpsTransExp (Annotated_F (TApp e e_tp) tp) cont                =
+----cpsTransExp (Annotated_F (Tuple xs) tp) cont                   =
+----cpsTransExp (Annotated_F (Proj index e) tp) cont               =
+----cpsTransExp (Annotated_F (PrimOp e1 op e2) tp) cont            =
+----cpsTransExp (Annotated_F (If e1 e2 e3) tp) cont                = 
+----cpsTransExp Annotated_F (Lam (n,n_tp) e) tp             = 
+----cpsTransExp Annotated_F (Let (n, n_tp) e1 e2) tp        = 
 
