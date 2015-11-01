@@ -21,7 +21,7 @@ import qualified Language.Java.Syntax as J (Op(..))
 type Name      = String
 type ClassName = String
 
--- Types.
+-------------SystemF Types-------------------------------------------------
 data Type
   = TVar Name
   | JClass ClassName
@@ -42,6 +42,8 @@ data Lit -- Data constructor names match Haskell types
 
 data Operator = Arith J.Op | Compare J.Op | Logic J.Op deriving (Eq, Show)
 
+
+----------------SystemF Expressions-----------------------------------------
 data Exp
   = Var String
   | Lit Lit
@@ -57,7 +59,23 @@ data Exp
   | Let (String, Type) Exp Exp
   deriving (Eq, Show)
 
-------------------------All The Type Checker---------------------------------------------
+cpsTransExp :: Annotated_F -> K_Exp
+cpsTransExp Annotated_F (Var name) tp                   = 
+cpsTransExp Annotated_F (Lit n) tp                      = 
+cpsTransExp Annotated_F (BLam name e) tp                = 
+cpsTransExp Annotated_F (App e1 e2) tp                  =  
+cpsTransExp Annotated_F (Fix name (n, n_tp) e1 e2) tp   = 
+cpsTransExp Annotated_F (TApp e e_tp) tp                =
+cpsTransExp Annotated_F (Tuple xs) tp                   =
+cpsTransExp Annotated_F (Proj index e) tp               =
+cpsTransExp Annotated_F (PrimOp e1 op e2) tp            =
+cpsTransExp Annotated_F (If e1 e2 e3) tp                = 
+--cpsTransExp Annotated_F (Lam (n,n_tp) e) tp             = 
+--cpsTransExp Annotated_F (Let (n, n_tp) e1 e2) tp        = 
+
+
+
+------------------------All The Type Checker For SystemF---------------------------------------------
 
 type TEnv = [(String, Type)]
 
@@ -140,3 +158,55 @@ tCheck (Tuple (x:xs)) tenv      =  let out = TupleType (fromJust((tCheck x tenv)
 
 tCheck (Fix n1 (n2, t1) e t2) tenv  = Just (Fun t1 t2)
 
+data Annotated_F = Annotated_F Exp Type
+
+--------------------------------Define CPSK data type ------------------------------------------------
+
+-- CPSK Types.
+data K_Type = K_TVar Name
+            | K_Void
+            | K_Fun [K_Type] K_Type
+            | K_TupleType [K_Type]
+            | K_Forall [Name] K_Type
+--------------Forall [Type_Arguments] K_Fun [K_Type] K_Void
+--------------Forall must follow the above rule
+            | K_Unit
+            | K_JClass Name
+
+
+data K_Exp = K_Var Name
+           | K_Lit Lit
+           | K_Tuple [K_Exp]
+           | K_If K_Exp K_Exp K_Exp
+           | K_App K_Exp K_Exp
+           | K_Proj Int K_Exp
+           | K_PrimOp K_Exp Operator K_Exp
+           | K_Halt Annotated_K
+           | K_Fix String [Name] [(K_Exp, K_Type)] K_Exp
+-------------Fix Function_name [Type_Arguments] [(Parameter, Parameter_Type)] Function_Body
+-------------According to https://www.cs.princeton.edu/~dpw/papers/tal-toplas.pdf
+           | K_Let Declaration K_Exp
+------------- Still missing part in the paper v[T](V), need to discuss with people
+
+data Declaration = Declare Name Annotated_K
+data Annotated_K = Annotated_K K_Exp K_Type
+
+------------------------------CPS Transformation from SystemF to CSPK----------------------------------
+
+cpsTransType :: Type -> K_Type
+cpsTransType (TVar name)           = K_TVar name
+
+cpsTransType (JClass name)         = K_JClass name
+cpsTransType  Unit                 = K_Unit
+cpsTransType (Fun t1 t2)           = K_Fun [cpsTransType(t1), cpsTransCont(t2)] K_Void 
+cpsTransType (Forall name tp)      = K_Forall [name] (K_Fun [cpsTransCont(tp)] K_Void)
+cpsTransType (TupleType (x:xs))    = K_TupleType (cpsTransType(x) : subList xs)
+                                    where subList xs = case xs of 
+                                                        [] -> []
+                                                        (y:ys) -> (cpsTransType y) : (subList ys)
+
+cpsTransCont :: Type -> K_Type
+cpsTransCont tp = K_Fun [cpsTransType(tp)] K_Void
+
+cpsTransExp :: Annotated_F -> K_Exp
+cpsTransExp Annotated_F 
