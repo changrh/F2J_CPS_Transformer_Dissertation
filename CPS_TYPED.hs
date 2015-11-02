@@ -1,14 +1,14 @@
 {- |
-Module      :  BaseTransCFJava
+Module      :  CPS
 Description :  Basic translation of FCore to Java
 Copyright   :  (c) 2014—2015 The F2J Project Developers (given in AUTHORS.txt)
 License     :  BSD3
 
-Maintainer  :  Unknown
+Maintainer  :  Johnny.Lin
 Stability   :  stable
 Portability :  non-portable (MPTC)
 
-This module implements the basic translation of FCore to Java. For
+This module implements the continuation passing style of FCore. For
 more information, please refer to the paper on wiki.
 -}
 
@@ -149,9 +149,8 @@ data Annotated_F = Annotated_F Exp Type
 -- CPSK Types.
 data N_Type = N_TVar Name
             | N_Void
-            | N_Fun [N_Type] N_Type
             | N_TupleType [N_Type]
-            | N_Forall [Name] N_Type
+            | N_Forall [Name] [N_Type] N_Type
 --------------Forall [Type_Arguments] N_Fun [N_Type] N_Void
 --------------Forall must follow the above rule
             | N_Unit
@@ -195,7 +194,7 @@ data N_Exp = N_Let Declaration N_Exp
         -----Let d in e 
            | N_If N_Value N_Exp N_Exp
         -----If (v, e1, e2)
-           | N_App Annotated_V [String] [Annotated_V]
+           | N_App Annotated_V [N_Type] [Annotated_V]
         -----N_App Fix [Type_Arguments] [correspond to Fix Parameters]
         -----This is a hybrid of App and TApp N_App N_Value [String] is a TApp for Fix
         -----And N_App N_Value [] [N_Value] is an App  
@@ -212,15 +211,15 @@ cpsTransType (TVar name)           = N_TVar name
 
 cpsTransType (JClass name)         = N_JClass name
 cpsTransType  Unit                 = N_Unit
-cpsTransType (Fun t1 t2)           = N_Fun [cpsTransType(t1), cpsTransCont(t2)] N_Void 
-cpsTransType (Forall name tp)      = N_Forall [name] (N_Fun [cpsTransCont(tp)] N_Void)
+cpsTransType (Fun t1 t2)           = N_Forall [] [cpsTransType(t1), cpsTransCont(t2)] N_Void 
+cpsTransType (Forall name tp)      = N_Forall [name] [cpsTransCont(tp)] N_Void
 cpsTransType (TupleType (x:xs))    = N_TupleType (cpsTransType(x) : subList xs)
                                     where subList xs = case xs of 
                                                         [] -> []
                                                         (y:ys) -> (cpsTransType y) : (subList ys)
 
 cpsTransCont :: Type -> N_Type
-cpsTransCont tp = N_Fun [cpsTransType(tp)] N_Void
+cpsTransCont tp = N_Forall [] [cpsTransType(tp)] N_Void
 
 cpsTransExp :: Annotated_F -> Annotated_V -> N_Exp
 cpsTransExp (Annotated_F (Var name) tp) cont                   = N_App cont [] [(Annotated_V (N_Var name) (cpsTransType tp))]  
@@ -241,14 +240,48 @@ cpsTransExp (Annotated_F (App e1 e2) tp) cont                  = let e1_tp = fro
                                                                      lam_x1  = N_Fix "lam_x1" [] [("x1", x1_tp)] (cpsTransExp u2 (Annotated_V lam_x2 u2_cont) )
                                                                      lam_x2  = N_Fix "lam_x2" [] [("x2", x2_tp)] (N_App (Annotated_V (N_Var "x1") x1_tp) [] [(Annotated_V (N_Var "x2") x2_tp), cont])
                                                                     in (cpsTransExp u1 (Annotated_V lam_x1 u1_cont) )
-cpsTransExp (Annotated_F (Fix name (n, n_tp) e1 e2) tp) cont   = let
-                                                          
-                                                                  in 
-----cpsTransExp (Annotated_F (TApp e e_tp) tp) cont                =
-----cpsTransExp (Annotated_F (Tuple xs) tp) cont                   =
+cpsTransExp (Annotated_F (Fix name (n, n_tp) e tp) tp_fix) cont = let x1_tp  = cpsTransType n_tp
+                                                                      c_tp   = cpsTransCont tp
+                                                                      fix_tp = cpsTransType tp_fix
+                                                                      fix_trans = N_Fix name [] [("x1", x1_tp),("c", c_tp)] (cpsTransExp (Annotated_F e tp) (Annotated_V (N_Var "c") c_tp))
+                                                                  in (N_App cont [] [(Annotated_V fix_trans fix_tp)])
+cpsTransExp (Annotated_F (TApp e ay_tp) tp) cont                = let e_tp = fromJust (tCheck e [("", Unit)])
+                                                                      x_tp = cpsTransType e_tp
+                                                                      ay_tran_tp = cpsTransType ay_tp
+                                                                      lam_x = N_Fix "lam_x" [] [("x", x_tp)] (N_App (Annotated_V (N_Var "x") x_tp) [ay_tran_tp] [cont])
+                                                                      lam_x_tp = cpsTransType tp                                                     
+                                                                  in cpsTransExp (Annotated_F e e_tp) (Annotated_V lam_x lam_x_tp)
+--cpsTransExp (Annotated_F (Tuple x:xs) tp) cont                 = let x_tp = fromJust (tCheck x [(" ", Unit)])
+--                                                                     lam_x_tp = cpsTransCont tp
+--                                                                     count = 1
+--                                                                     new_tuple = [] 
+--                                                                 in cpsTransExp (Annotated_F (x) (x_tp)) (Annotated_V (want) lam_x_tp)
+--                                                                      where want = N_Fix ("x" ++ count ++ "_continuation") [] [("x" ++ count, cpsTransType x_tp)] (subList (xs new_tuple count))
+--                                                                            new_tuple = (Annotated_V (Var "x" ++ count) (x1_tp)) : new_tuple
+--                                                                              where subList (xs new_tuple count) = case xs of 
+--                                                                                                                    [] -> N_App cont [] [new_tuple]
+--                                                                                                                    (y:ys) -> let y_tp = tCheck y [("", Unit)]
+--                                                                                                                                  y_cont = cpsTransCont y_tp
+--                                                                                                                                  y_trans_tp = cpsTransType y_tp
+--                                                                                                                                  count = count + 1
+--                                                                                                                                  new_tuple = (Annotated_V (Var "x" ++ count) (y_trans_tp)) : new_tuple
+--                                                                                                                              in  cpsTransExp (Annotated_F (y) (y_tp)) (Annotated_V want_y y_cont)
+--                                                                                                                                   where want_y = Fix ("x" ++ count ++ "_continuation") [] [("x" ++ count, (y_trans_tp))] (subList ys new_tuple count) 
+cpsTransExp (Annotated_F (Tuple (x:xs)) tp) cont                 = let x_tp = fromJust (tCheck x [(" ", Unit)])
+                                                                       x1_tp = cpsTransType x_tp
+                                                                       lam_x_tp = cpsTransCont tp
+                                                                       new_tuple = (Annotated_V (N_Var "x1") (x1_tp))
+                                                                    in cpsTransExp (Annotated_F (x) (x_tp)) (Annotated_V (N_Fix ("x_continuation") [] [("x1", x1_tp)] (subList xs new_tuple)) lam_x_tp)
+                                                                      where subList xs new_tuple = case xs of 
+                                                                                                        [] -> N_App cont [] [new_tuple]
+                                                                                                        (y:ys) -> let y_tp = fromJust (tCheck y [("", Unit)])
+                                                                                                                      y_cont = cpsTransCont y_tp
+                                                                                                                      y_trans_tp = cpsTransType y_tp
+                                                                                                                      new_tuple = (Annotated_V (N_Var "x2") (y_trans_tp)): new_tuple
+                                                                                                                  in  cpsTransExp (Annotated_F (y) (y_tp)) (Annotated_V (N_Fix ("x_continuation") [] [("x2", (y_trans_tp))] (subList ys new_tuple)) y_cont)
+
+
 ----cpsTransExp (Annotated_F (Proj index e) tp) cont               =
 ----cpsTransExp (Annotated_F (PrimOp e1 op e2) tp) cont            =
 ----cpsTransExp (Annotated_F (If e1 e2 e3) tp) cont                = 
-----cpsTransExp Annotated_F (Lam (n,n_tp) e) tp             = 
 ----cpsTransExp Annotated_F (Let (n, n_tp) e1 e2) tp        = 
-
