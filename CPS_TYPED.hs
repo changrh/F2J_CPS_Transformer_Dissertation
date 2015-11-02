@@ -172,11 +172,11 @@ data N_Type = N_TVar Name
 --           | N_Let Declaration N_Exp
 --------------- Still missing part in the paper v[T](V), need to discuss with people
 type Paramter = String
-type TypePara = String
+type TypeArgs = String
 
 data N_Value = N_Var Name
              | N_Lit Lit
-             | N_Fix String [TypePara] [(Paramter, N_Type)] N_Exp
+             | N_Fix String [TypeArgs] [(Paramter, N_Type)] N_Exp
            ----Fix x [a] (X1:T1,.....Xn:Tn). e
            ----TypePara is a type argument used in N_Type in the binder
            ----Parameter is a String, which indicates a corresponding N_Value in the Fix Body  
@@ -184,20 +184,21 @@ data N_Value = N_Var Name
 
 
 ------------------In Declaration N_Value should be N_Var Name---------------
-data Declaration = Declare_V N_Value  Annotated_V
-            ------- x = v  
-                 | Declare_T N_Value Int Annotated_V
+data Declaration = Declare_V String  Annotated_V
+            ------- x = v  here x is a N_Var
+                 | Declare_T String Int Annotated_V
             ------- x = Proj Int Tuple [N_Value]
-                 | Declare_O N_Value Annotated_V Operator Annotated_V
+                 | Declare_O String Annotated_V Operator Annotated_V
             ------- x = v1 Op v2
 
 data N_Exp = N_Let Declaration N_Exp
         -----Let d in e 
            | N_If N_Value N_Exp N_Exp
         -----If (v, e1, e2)
-           | N_App Annotated_V Annotated_V
-        -----N_App Fix [Type_Arguments] [(parameter, parameter_type)] Not Sure About this term here ????  
-        -----N_App N_Value [N_Type] [(String, N_Type)]       
+           | N_App Annotated_V [String] [Annotated_V]
+        -----N_App Fix [Type_Arguments] [correspond to Fix Parameters]
+        -----This is a hybrid of App and TApp N_App N_Value [String] is a TApp for Fix
+        -----And N_App N_Value [] [N_Value] is an App  
            | N_Halt Annotated_V
         -----Halt [T] V   
 
@@ -221,17 +222,28 @@ cpsTransType (TupleType (x:xs))    = N_TupleType (cpsTransType(x) : subList xs)
 cpsTransCont :: Type -> N_Type
 cpsTransCont tp = N_Fun [cpsTransType(tp)] N_Void
 
-cpsTransExp :: Annotated_F -> Annotated_V -> Maybe N_Exp
-cpsTransExp (Annotated_F (Var name) tp) cont                   = Just (N_App cont (Annotated_V (N_Var name) (cpsTransType tp)) ) 
---cpsTransExp (Annotated_F (Lit n) tp) cont                      = Just (N_App cont (Annotated_K (N_Lit n) (cpsTransType tp)) ) 
---cpsTransExp (Annotated_F (BLam name e) tp) cont                = case tp of 
---                                                                    Forall n t -> (let c_tp = cpsTransCont t
---                                                                                       exp_tp = cpsTransType tp
---                                                                                       exp = N_Fix "BLam" [name] [(N_Var "c", c_tp)] (fromJust (cpsTransExp (Annotated_F e t) (Annotated_K (N_Var "c") c_tp)) )                                                                                  
---                                                                                  in Just (N_App cont (Annotated_K exp exp_tp)) )
---                                                                    _ -> Nothing
---cpsTransExp (Annotated_F (App e1 e2) tp) cont                  =  
-----cpsTransExp (Annotated_F (Fix name (n, n_tp) e1 e2) tp) cont   = 
+cpsTransExp :: Annotated_F -> Annotated_V -> N_Exp
+cpsTransExp (Annotated_F (Var name) tp) cont                   = N_App cont [] [(Annotated_V (N_Var name) (cpsTransType tp))]  
+cpsTransExp (Annotated_F (Lit n) tp) cont                      = N_App cont [] [(Annotated_V (N_Lit n) (cpsTransType tp))] 
+cpsTransExp (Annotated_F (BLam name e) tp) cont                = case tp of 
+                                                                    Forall n t -> (let c_tp = cpsTransCont t
+                                                                                       exp_tp = cpsTransType tp
+                                                                                       exp = N_Fix "BLam" [name] [("c", c_tp)] (cpsTransExp (Annotated_F e t) (Annotated_V (N_Var "c") c_tp))                                                                                  
+                                                                                  in N_App cont [] [(Annotated_V exp exp_tp)] )
+cpsTransExp (Annotated_F (App e1 e2) tp) cont                  = let e1_tp = fromJust (tCheck e1 [(" ", Unit)])
+                                                                     e2_tp = fromJust (tCheck e2 [(" ", Unit)])
+                                                                     u1    = Annotated_F e1 e1_tp
+                                                                     u2    = Annotated_F e2 e2_tp
+                                                                     u1_cont = cpsTransCont e1_tp
+                                                                     u2_cont = cpsTransCont e2_tp
+                                                                     x1_tp   = cpsTransType e1_tp
+                                                                     x2_tp   = cpsTransType e2_tp
+                                                                     lam_x1  = N_Fix "lam_x1" [] [("x1", x1_tp)] (cpsTransExp u2 (Annotated_V lam_x2 u2_cont) )
+                                                                     lam_x2  = N_Fix "lam_x2" [] [("x2", x2_tp)] (N_App (Annotated_V (N_Var "x1") x1_tp) [] [(Annotated_V (N_Var "x2") x2_tp), cont])
+                                                                    in (cpsTransExp u1 (Annotated_V lam_x1 u1_cont) )
+cpsTransExp (Annotated_F (Fix name (n, n_tp) e1 e2) tp) cont   = let
+                                                          
+                                                                  in 
 ----cpsTransExp (Annotated_F (TApp e e_tp) tp) cont                =
 ----cpsTransExp (Annotated_F (Tuple xs) tp) cont                   =
 ----cpsTransExp (Annotated_F (Proj index e) tp) cont               =
