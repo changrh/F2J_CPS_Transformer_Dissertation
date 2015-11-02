@@ -155,7 +155,7 @@ data N_Type = N_TVar Name
 --------------Forall must follow the above rule
             | N_Unit
             | N_JClass Name
-
+  deriving (Eq, Show, Read)
 type Paramter = String
 type TypeArgs = String
 
@@ -166,7 +166,7 @@ data N_Value = N_Var Name
            ----TypePara is a type argument used in N_Type in the binder
            ----Parameter is a String, which indicates a corresponding N_Value in the Fix Body  
              | N_Tuple [N_Value]
-
+  deriving (Eq, Show)
 
 ------------------In Declaration N_Value should be N_Var Name---------------
 data Declaration = Declare_V String  Annotated_V
@@ -175,7 +175,7 @@ data Declaration = Declare_V String  Annotated_V
             ------- x = Proj Int Tuple [N_Value]
                  | Declare_O String Annotated_V Operator Annotated_V
             ------- x = v1 Op v2
-
+  deriving (Eq, Show)
 data N_Exp = N_Let Declaration N_Exp
         -----Let d in e 
            | N_If Annotated_V N_Exp N_Exp
@@ -186,10 +186,10 @@ data N_Exp = N_Let Declaration N_Exp
         -----And N_App N_Value [] [N_Value] is an App  
            | N_Halt Annotated_V
         -----Halt [T] V   
-
+  deriving (Eq, Show)
 
 data Annotated_V = Annotated_V N_Value N_Type
-
+  deriving (Eq, Show)
 ------------------------------CPS Transformation from SystemF to CSPK----------------------------------
 
 cpsTransType :: Type -> N_Type
@@ -288,3 +288,17 @@ cpsTransExp (Annotated_F (If e1 e2 e3) tp) cont                   = let e1_tp = 
                                                                         lam_x = N_Fix "lam_x" [] [("x", x_tp)] (N_If (Annotated_V (N_Var "x") x_tp) (cpsTransExp (Annotated_F e2 e2_tp) cont) (cpsTransExp (Annotated_F e3 e3_tp) cont) ) 
                                                                         lam_x_tp = cpsTransCont e1_tp
                                                                     in cpsTransExp (Annotated_F e1 e1_tp) (Annotated_V lam_x lam_x_tp)
+
+cpsTransProg :: Annotated_F -> N_Exp
+cpsTransProg (Annotated_F e e_tp) = let x_tp = cpsTransType e_tp
+                                        intial_cont_tp = cpsTransCont e_tp
+                                        initial_contination = N_Fix "initial_contination" [] [("x", x_tp)] (N_Halt (Annotated_V (N_Var "x") x_tp) )
+                                    in cpsTransExp (Annotated_F e e_tp) (Annotated_V initial_contination intial_cont_tp)
+
+----------------------------------------CPS Testing--------------------------------------------------
+--Annotated_F (Fix name (n, n_tp) e tp) tp_fix
+--Fix String (String, Type) Exp Type
+--lam x:int. x
+main =  let prog = (Fix "Application" ("x", JClass "Int") (Var "x") (JClass "Int"))
+            prog_tp = fromJust (tCheck prog [(" ", Unit)])
+        in  cpsTransProg (Annotated_F  prog prog_tp)
