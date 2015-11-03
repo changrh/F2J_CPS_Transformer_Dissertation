@@ -413,6 +413,71 @@ cpsTransProg (Annotated_F e e_tp) = do
 runCPS :: CPS_State N_Exp -> N_Exp
 runCPS x = evalState x initial_state
             where initial_state = Environment { funcNameID = 0, varNameID = 0, tCheckEnv = [(" ", Unit)], varEnv = [(" ", N_Unit)]}
+
+----------------------------------------CPS Evaluator------------------------------------------------
+type Env = [(String, Annotated_V)]
+type NTEnv = [(String, N_Type)]
+
+evaluate :: N_Exp -> Env -> NTEnv -> Maybe N_Value
+
+evaluate (N_Let dec body) env tenv = evaluate body newEnv tenv
+  where newEnv = case dec of 
+                  Declare_V n v -> (n, v):env
+                  Declare_T n idx tuple -> (n, (fromJust (eval_tuple idx tuple))):env                  
+                  Declare_O n (Annotated_V v1 t1) op (Annotated_V v2 t2) -> (n, (fromJust (eval_op op (eval_value v1 env) (eval_value v2 env)))):env
+
+evaluate (N_If av e1 e2) env tenv = 
+  let test = fromJust (eval_bool av env) in
+    if test then evaluate e1 env tenv
+            else evaluate e2 env tenv
+
+evaluate (N_App av ts avs) env tenv = eval_app av ts avs env tenv            
+
+evaluate (N_Halt (Annotated_V v t)) env tenv = Just (eval_value v env)
+
+eval_app :: Annotated_V -> [N_Type] -> [Annotated_V] -> Env -> NTEnv -> Maybe N_Value
+eval_app (Annotated_V (N_Var n) t) ts avs env tenv = 
+  case lookup n env of
+      Nothing -> error (show env++n)
+      Just av -> eval_app av ts avs env tenv
+
+eval_app (Annotated_V (N_Fix f tns pts body) t) ts avs env tenv = evaluate body newEnv newTEnv
+      where newEnv = (zip (map fst pts) avs) ++ env
+            newTEnv = (zip tns ts) ++ tenv
+
+eval_tuple :: Int -> Annotated_V -> Maybe Annotated_V
+eval_tuple idx (Annotated_V (N_Tuple xs) (N_TupleType ys)) = Just (Annotated_V (xs!!idx) (ys!!idx))
+eval_tuple _ _ = Nothing
+
+eval_bool :: Annotated_V -> Env -> Maybe Bool
+eval_bool (Annotated_V (N_Var x) t) env = 
+  case lookup x env of
+    Nothing -> error "Lookup Error2!"
+    Just av -> eval_bool av env
+
+eval_bool (Annotated_V (N_Lit (Bool bv)) (N_JClass "Bool")) env = Just bv
+eval_bool (Annotated_V (N_Lit (Int i)) (N_JClass "Int")) env = if i > 0 then Just True else Just False
+eval_bool _ env = Nothing
+
+eval_value :: N_Value -> Env -> N_Value
+eval_value  (N_Var x) env =
+  case lookup x env of
+    Nothing -> error "Lookup Error3!"
+    Just (Annotated_V v t) -> eval_value v env
+eval_value (N_Lit v) env = N_Lit v
+eval_value _ _ = error "Unknow value"
+
+eval_op :: Operator -> N_Value -> N_Value -> Maybe Annotated_V
+eval_op (Arith J.Add) (N_Lit (Int a)) (N_Lit (Int b)) = Just (Annotated_V (N_Lit (Int (a + b))) (N_JClass "Int"))
+eval_op (Arith J.Sub) (N_Lit (Int a)) (N_Lit (Int b)) = Just (Annotated_V (N_Lit (Int (a - b))) (N_JClass "Int")) 
+eval_op (Arith J.Mult) (N_Lit (Int a)) (N_Lit (Int b)) = Just (Annotated_V (N_Lit (Int (a * b))) (N_JClass "Int")) 
+--eval_op (Arith J.Div) (N_Lit (Int a)) (N_Lit (Int b)) = Just (Annotated_V (N_Lit (Int (a 'div' b))) (N_JClass "Integer")) 
+--eval_op (Arith J.Rem) (N_Lit (Int a)) (N_Lit (Int b)) = Just (Annotated_V (N_Lit (Int (a % b))) (N_JClass "Integer"))  
+eval_op (Compare J.GThan) (N_Lit (Int a)) (N_Lit (Int b)) = Just (Annotated_V (N_Lit (Bool (a > b))) (N_JClass "Bool"))  
+eval_op (Compare J.GThanE) (N_Lit (Int a)) (N_Lit (Int b)) = Just (Annotated_V (N_Lit (Bool (a >= b))) (N_JClass "Bool")) 
+eval_op (Compare J.LThan) (N_Lit (Int a)) (N_Lit (Int b)) = Just (Annotated_V (N_Lit (Bool (a < b))) (N_JClass "Bool")) 
+eval_op (Compare J.LThanE) (N_Lit (Int a)) (N_Lit (Int b)) = Just (Annotated_V (N_Lit (Bool (a <= b))) (N_JClass "Bool")) 
+
 ----------------------------------------CPS Testing--------------------------------------------------
 --Annotated_F (Fix name (n, n_tp) e tp) tp_fix
 --Fix String (String, Type) Exp Type
@@ -423,7 +488,46 @@ runCPS x = evalState x initial_state
 --        in  runCPS $ cpsTransProg (Annotated_F  prog prog_tp)
 --------------------------TEST CASE 2 -----------------------------------------------------
 --lam x:int. (x + 3)
-main =  let prog = (Fix "Add_two_ints" ("x", JClass "Int") (PrimOp (Var "x") (Arith J.Add) (Lit (Int 3))) (JClass "Int"))
-            prog_tp = fromJust (tCheck prog [(" ", Unit)])
-        in runCPS $ cpsTransProg (Annotated_F  prog prog_tp) 
+--main =  let prog = (Fix "Add_two_ints" ("x", JClass "Int") (PrimOp (Var "x") (Arith J.Add) (Lit (Int 3))) (JClass "Int"))
+--            prog_tp = fromJust (tCheck prog [(" ", Unit)])
+--        in runCPS $ cpsTransProg (Annotated_F  prog prog_tp) 
 --main = fromJust (tCheck (PrimOp (Lit (Int 3)) (Arith J.Add) (Lit (Int 3))) [(" ", Unit)])
+--------------------------TEST CASE 3 -----------------------------------------------------
+--main = let e1 = Annotated_V (N_Var "x") (N_TVar "A") 
+--           e2 = Annotated_V (N_Var "y") (N_TVar "A") 
+--           u  = N_Fix 
+--                "f" 
+--                ["A"] 
+--                [("x", (N_TVar "A")),("y", (N_TVar "A"))] 
+--                (N_Let 
+--                  (Declare_O "Z" e1 (Arith J.Add) e2) 
+--                  (N_App 
+--                    (Annotated_V 
+--                      (N_Fix 
+--                        "" 
+--                        [] 
+--                        [("k", (N_JClass "Int"))] 
+--                        (N_Halt (Annotated_V (N_Var "k") (N_JClass "Int")))
+--                      ) 
+--                      (N_Forall [] [(N_JClass "Int")] N_Void)
+--                    ) 
+--                    [] 
+--                    [(Annotated_V (N_Var "Z") (N_JClass "Int"))] 
+--                  )
+--                )
+--           p = N_App 
+--                (Annotated_V 
+--                  u 
+--                  (N_Forall ["A"] [(N_TVar "A"),(N_TVar "A")] N_Void)
+--                ) 
+--                [(N_JClass "Int")] 
+--                [(Annotated_V (N_Lit (Int 2)) (N_JClass "Int")), (Annotated_V (N_Lit (Int 3)) (N_JClass "Int"))]
+--        in evaluate p [(" ", Annotated_V (N_Lit (Int 3)) (N_JClass "Int") )] [(" ", N_Unit)]
+
+
+-----------------------------TEST CASE 4 -----------------------------------------------------
+--APP (lam x:int. (x + 3)) (Lit Int 3)
+main =  let prog = App (Fix "Add_two_ints" ("x", JClass "Int") (PrimOp (Var "x") (Arith J.Add) (Lit (Int 3))) (JClass "Int")) (Lit (Int 3))
+            prog_tp = fromJust (tCheck prog [(" ", Unit)])
+        in evaluate (runCPS $ cpsTransProg (Annotated_F  prog prog_tp)) [(" ", Annotated_V (N_Lit (Int 0)) (N_JClass "Int") )] [(" ", N_Unit)]
+        --in (runCPS $ cpsTransProg (Annotated_F  prog prog_tp))
