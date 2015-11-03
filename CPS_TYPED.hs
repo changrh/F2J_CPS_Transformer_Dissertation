@@ -318,54 +318,101 @@ cpsTransExp (Annotated_F (Tuple (x:xs)) tp) cont                = do
                                                                                                                     cpsTransExp (Annotated_F (y) (y_tp)) (Annotated_V (N_Fix functionName_1 [] [(varName_1, (y_trans_tp))] cps_rest_1) y_cont)
 
 
---cpsTransExp (Annotated_F (Proj index e) tp) cont                = do
---                                                                    tenv <- gets tCheckEnv
---                                                                    varID <- gets varNameID
---                                                                    funcID <- gets funcNameID
---                                                                    varEnvironment <- gets varEnv
---                                                                    let e_tp = fromJust (tCheck e tenv)
---                                                                        e_trans_tp = cpsTransType e_tp
---                                                                        y_tp = cpsTransType tp
---                                                                        lam_x = N_Fix "" [] [("x", e_trans_tp)] (N_Let (Declare_T "y" index (Annotated_V (N_Var "x") (e_trans_tp))) (N_App cont [] [(Annotated_V (N_Var "y") y_tp)]) )
---                                                                        lam_x_tp = cpsTransCont tp
---                                                                    cpsTransExp (Annotated_F (Proj index e) (e_tp)) (Annotated_V (lam_x) (lam_x_tp))
---cpsTransExp (Annotated_F (PrimOp e1 op e2) tp) cont             = let e1_tp = fromJust (tCheck e1 [(" ", Unit)])
---                                                                      e2_tp = fromJust (tCheck e2 [(" ", Unit)])
---                                                                  in  case (e1_tp, e2_tp) of
---                                                                        (JClass "Int", JClass "Int") -> let lam_x2 = N_Fix "Lam_x2" [] [("x2", N_JClass "Int")] (N_Let (Declare_O "y" (Annotated_V (N_Var "x1") (N_JClass "Int")) op (Annotated_V (N_Var "x2") (N_JClass "Int"))) (N_App cont [] [(Annotated_V (N_Var "y") (N_JClass "Int"))]) )
---                                                                                                            lam_x2_cont = cpsTransCont (JClass "Int")
---                                                                                                            lam_x1_cont = cpsTransCont (JClass "Int") 
---                                                                                                            lam_x1 = N_Fix "Lam_x1" [] [("x1", N_JClass "Int")] (cpsTransExp (Annotated_F e2 e2_tp) (Annotated_V lam_x2 lam_x2_cont))
---                                                                                                        in cpsTransExp (Annotated_F e1 e1_tp) (Annotated_V lam_x1 lam_x1_cont)
---                                                                        (JClass "Bool", JClass "Bool") -> let lam_x2 = N_Fix "Lam_x2" [] [("x2", N_JClass "Bool")] (N_Let (Declare_O "y" (Annotated_V (N_Var "x1") (N_JClass "Bool")) op (Annotated_V (N_Var "x2") (N_JClass "Bool"))) (N_App cont [] [(Annotated_V (N_Var "y") (N_JClass "Bool"))]) )
---                                                                                                              lam_x2_cont = cpsTransCont (JClass "Bool")
---                                                                                                              lam_x1_cont = cpsTransCont (JClass "Bool") 
---                                                                                                              lam_x1 = N_Fix "Lam_x1" [] [("x1", N_JClass "Bool")] (cpsTransExp (Annotated_F e2 e2_tp) (Annotated_V lam_x2 lam_x2_cont))
---                                                                                                          in cpsTransExp (Annotated_F e1 e1_tp) (Annotated_V lam_x1 lam_x1_cont)
---                                                                        (JClass "Char", JClass "Char") -> let lam_x2 = N_Fix "Lam_x2" [] [("x2", N_JClass "Char")] (N_Let (Declare_O "y" (Annotated_V (N_Var "x1") (N_JClass "Char")) op (Annotated_V (N_Var "x2") (N_JClass "Char"))) (N_App cont [] [(Annotated_V (N_Var "y") (N_JClass "Char"))]) )
---                                                                                                              lam_x2_cont = cpsTransCont (JClass "Char")
---                                                                                                              lam_x1_cont = cpsTransCont (JClass "Char") 
---                                                                                                              lam_x1 = N_Fix "Lam_x1" [] [("x1", N_JClass "Char")] (cpsTransExp (Annotated_F e2 e2_tp) (Annotated_V lam_x2 lam_x2_cont))
---                                                                                                          in cpsTransExp (Annotated_F e1 e1_tp) (Annotated_V lam_x1 lam_x1_cont)
---                                                                        (JClass "String", JClass "String") -> let lam_x2 = N_Fix "Lam_x2" [] [("x2", N_JClass "String")] (N_Let (Declare_O "y" (Annotated_V (N_Var "x1") (N_JClass "String")) op (Annotated_V (N_Var "x2") (N_JClass "String"))) (N_App cont [] [(Annotated_V (N_Var "y") (N_JClass "String"))]) )
---                                                                                                                  lam_x2_cont = cpsTransCont (JClass "String")
---                                                                                                                  lam_x1_cont = cpsTransCont (JClass "String") 
---                                                                                                                  lam_x1 = N_Fix "Lam_x1" [] [("x1", N_JClass "String")] (cpsTransExp (Annotated_F e2 e2_tp) (Annotated_V lam_x2 lam_x2_cont))
---                                                                                                              in cpsTransExp (Annotated_F e1 e1_tp) (Annotated_V lam_x1 lam_x1_cont)
---cpsTransExp (Annotated_F (If e1 e2 e3) tp) cont                   = let e1_tp = fromJust (tCheck e1 [(" ", Unit)])
---                                                                        e2_tp = fromJust (tCheck e2 [(" ", Unit)])
---                                                                        e3_tp = fromJust (tCheck e3 [(" ", Unit)])
---                                                                        x_tp = cpsTransType e1_tp
---                                                                        lam_x = N_Fix "lam_x" [] [("x", x_tp)] (N_If (Annotated_V (N_Var "x") x_tp) (cpsTransExp (Annotated_F e2 e2_tp) cont) (cpsTransExp (Annotated_F e3 e3_tp) cont) ) 
---                                                                        lam_x_tp = cpsTransCont e1_tp
---                                                                    in cpsTransExp (Annotated_F e1 e1_tp) (Annotated_V lam_x lam_x_tp)
+cpsTransExp (Annotated_F (Proj index e) tp) cont                = do
+                                                                    tenv <- gets tCheckEnv
+                                                                    varID <- gets varNameID
+                                                                    funcID <- gets funcNameID
+                                                                    varEnvironment <- gets varEnv
+                                                                    let e_tp = fromJust (tCheck e tenv)
+                                                                        e_trans_tp = cpsTransType e_tp
+                                                                        y_tp = cpsTransType tp
+                                                                        functionName = "Lam_" ++ show funcID
+                                                                        varName = "Var_" ++ show varID
+                                                                        varName_Y = "Var_" ++ show (varID + 1)
+                                                                        lam_x = N_Fix functionName [] [(varName, e_trans_tp)] (N_Let (Declare_T varName_Y index (Annotated_V (N_Var varName) (e_trans_tp))) (N_App cont [] [(Annotated_V (N_Var varName_Y) y_tp)]) )
+                                                                        lam_x_tp = cpsTransCont e_tp
+                                                                    modify (\s -> s {varNameID = varID + 2,funcNameID = funcID + 1, varEnv = (varName, e_trans_tp) : varEnvironment})
+                                                                    cpsTransExp (Annotated_F (Proj index e) (e_tp)) (Annotated_V (lam_x) (lam_x_tp))
+cpsTransExp (Annotated_F (PrimOp e1 op e2) tp) cont             = do
+                                                                    tenv <- gets tCheckEnv
+                                                                    varID <- gets varNameID
+                                                                    funcID <- gets funcNameID
+                                                                    varEnvironment <- gets varEnv
+                                                                    let e1_tp = fromJust (tCheck e1 tenv)
+                                                                        e2_tp = fromJust (tCheck e2 tenv)
+                                                                        functionName_1 = "Lam_" ++ show funcID
+                                                                        functionName_2 = "Lam_" ++ show (funcID + 1)
+                                                                        varName_1 = "Var_" ++ show varID
+                                                                        varName_2 = "Var_" ++ show (varID + 1)
+                                                                        varName_Y = "Var_" ++ show (varID + 2)
+                                                                    case (e1_tp, e2_tp) of
+                                                                        (JClass "Int", JClass "Int") -> do
+                                                                                                          let lam_x2 = N_Fix functionName_2 [] [(varName_2, N_JClass "Int")] (N_Let (Declare_O varName_Y (Annotated_V (N_Var varName_1) (N_JClass "Int")) op (Annotated_V (N_Var varName_2) (N_JClass "Int"))) (N_App cont [] [(Annotated_V (N_Var varName_Y) (N_JClass "Int"))]) )
+                                                                                                              lam_x2_cont = cpsTransCont (JClass "Int")
+                                                                                                              lam_x1_cont = cpsTransCont (JClass "Int") 
+                                                                                                          cps_rest <- cpsTransExp (Annotated_F e2 e2_tp) (Annotated_V lam_x2 lam_x2_cont)
+                                                                                                          let lam_x1 = N_Fix functionName_1 [] [(varName_1, N_JClass "Int")] (cps_rest)
+                                                                                                          modify (\s -> s {varNameID = varID + 3,funcNameID = funcID + 2, varEnv = (varName_1, N_JClass "Int") : (varName_2, N_JClass "Int") : (varName_Y, cpsTransType tp) : varEnvironment})
+                                                                                                          cpsTransExp (Annotated_F e1 e1_tp) (Annotated_V lam_x1 lam_x1_cont)
+                                                                        (JClass "Bool", JClass "Bool") -> do
+                                                                                                            let lam_x2 = N_Fix functionName_2 [] [(varName_2, N_JClass "Bool")] (N_Let (Declare_O varName_Y (Annotated_V (N_Var varName_1) (N_JClass "Bool")) op (Annotated_V (N_Var varName_2) (N_JClass "Bool"))) (N_App cont [] [(Annotated_V (N_Var varName_Y) (N_JClass "Bool"))]) )
+                                                                                                                lam_x2_cont = cpsTransCont (JClass "Bool")
+                                                                                                                lam_x1_cont = cpsTransCont (JClass "Bool") 
+                                                                                                            cps_rest <- cpsTransExp (Annotated_F e2 e2_tp) (Annotated_V lam_x2 lam_x2_cont)
+                                                                                                            let lam_x1 = N_Fix functionName_1 [] [(varName_1, N_JClass "Bool")] (cps_rest)
+                                                                                                            modify (\s -> s {varNameID = varID + 3,funcNameID = funcID + 2, varEnv = (varName_1, N_JClass "Bool") : (varName_2, N_JClass "Bool") : (varName_Y, cpsTransType tp) : varEnvironment})
+                                                                                                            cpsTransExp (Annotated_F e1 e1_tp) (Annotated_V lam_x1 lam_x1_cont)
+                                                                        (JClass "Char", JClass "Char") -> do
+                                                                                                            let lam_x2 = N_Fix functionName_2 [] [(varName_2, N_JClass "Char")] (N_Let (Declare_O varName_Y (Annotated_V (N_Var varName_1) (N_JClass "Char")) op (Annotated_V (N_Var varName_2) (N_JClass "Char"))) (N_App cont [] [(Annotated_V (N_Var varName_Y) (N_JClass "Char"))]) )
+                                                                                                                lam_x2_cont = cpsTransCont (JClass "Char")
+                                                                                                                lam_x1_cont = cpsTransCont (JClass "Char") 
+                                                                                                            cps_rest <- cpsTransExp (Annotated_F e2 e2_tp) (Annotated_V lam_x2 lam_x2_cont)
+                                                                                                            let lam_x1 = N_Fix functionName_1 [] [(varName_1, N_JClass "Char")] (cps_rest)
+                                                                                                            modify (\s -> s {varNameID = varID + 3,funcNameID = funcID + 2, varEnv = (varName_1, N_JClass "Char") : (varName_2, N_JClass "Char") : (varName_Y, cpsTransType tp) : varEnvironment})
+                                                                                                            cpsTransExp (Annotated_F e1 e1_tp) (Annotated_V lam_x1 lam_x1_cont)
+                                                                        (JClass "String", JClass "String") -> do
+                                                                                                                let lam_x2 = N_Fix functionName_2 [] [(varName_2, N_JClass "String")] (N_Let (Declare_O varName_Y (Annotated_V (N_Var varName_1) (N_JClass "String")) op (Annotated_V (N_Var varName_2) (N_JClass "String"))) (N_App cont [] [(Annotated_V (N_Var varName_Y) (N_JClass "String"))]) )
+                                                                                                                    lam_x2_cont = cpsTransCont (JClass "String")
+                                                                                                                    lam_x1_cont = cpsTransCont (JClass "String") 
+                                                                                                                cps_rest <- cpsTransExp (Annotated_F e2 e2_tp) (Annotated_V lam_x2 lam_x2_cont)
+                                                                                                                let lam_x1 = N_Fix functionName_1 [] [(varName_1, N_JClass "String")] (cps_rest)
+                                                                                                                modify (\s -> s {varNameID = varID + 3,funcNameID = funcID + 2, varEnv = (varName_1, N_JClass "String") : (varName_2, N_JClass "String") : (varName_Y, cpsTransType tp) : varEnvironment})
+                                                                                                                cpsTransExp (Annotated_F e1 e1_tp) (Annotated_V lam_x1 lam_x1_cont)
+cpsTransExp (Annotated_F (If e1 e2 e3) tp) cont                   = do
+                                                                      tenv <- gets tCheckEnv
+                                                                      varID <- gets varNameID
+                                                                      funcID <- gets funcNameID
+                                                                      varEnvironment <- gets varEnv
+                                                                      let e1_tp = fromJust (tCheck e1 tenv)
+                                                                          e2_tp = fromJust (tCheck e2 tenv)
+                                                                          e3_tp = fromJust (tCheck e3 tenv)
+                                                                          x_tp = cpsTransType e1_tp
+                                                                          functionName = "Lam_" ++ show funcID
+                                                                          varName = "Var_" ++ show varID
+                                                                      modify (\s -> s {varNameID = varID + 1,funcNameID = funcID + 1, varEnv = (varName, x_tp) : varEnvironment})
+                                                                      cps_rest_1 <- cpsTransExp (Annotated_F e2 e2_tp) cont
+                                                                      cps_rest_2 <- cpsTransExp (Annotated_F e3 e3_tp) cont
+                                                                      let lam_x = N_Fix functionName [] [(varName, x_tp)] (N_If (Annotated_V (N_Var "x") x_tp) (cps_rest_1) (cps_rest_2) ) 
+                                                                          lam_x_tp = cpsTransCont e1_tp
+                                                                      cpsTransExp (Annotated_F e1 e1_tp) (Annotated_V lam_x lam_x_tp)
 
---cpsTransProg :: Annotated_F -> TEnv -> N_Exp
---cpsTransProg (Annotated_F e e_tp) tenv = let x_tp = cpsTransType e_tp
---                                             intial_cont_tp = cpsTransCont e_tp
---                                             initial_contination = N_Fix "initial_contination" [] [("x", x_tp)] (N_Halt (Annotated_V (N_Var "x") x_tp) )
---                                          in cpsTransExp (Annotated_F e e_tp) (Annotated_V initial_contination intial_cont_tp)
+cpsTransProg :: Annotated_F -> CPS_State N_Exp
+cpsTransProg (Annotated_F e e_tp) = do 
+                                      tenv <- gets tCheckEnv
+                                      varID <- gets varNameID
+                                      funcID <- gets funcNameID
+                                      varEnvironment <- gets varEnv
+                                      let x_tp = cpsTransType e_tp
+                                          intial_cont_tp = cpsTransCont e_tp
+                                          functionName = "Initial_Contination" ++ show funcID
+                                          varName = "Var_" ++ show varID
+                                          initial_contination = N_Fix functionName [] [(varName, x_tp)] (N_Halt (Annotated_V (N_Var varName) x_tp) )
+                                      modify (\s -> s {varNameID = varID + 1,funcNameID = funcID + 1, varEnv = (varName, x_tp) : varEnvironment})
+                                      cpsTransExp (Annotated_F e e_tp) (Annotated_V initial_contination intial_cont_tp)
 
+runCPS :: CPS_State N_Exp -> N_Exp
+runCPS x = evalState x initial_state
+            where initial_state = Environment { funcNameID = 0, varNameID = 0, tCheckEnv = [(" ", Unit)], varEnv = [(" ", N_Unit)]}
 ----------------------------------------CPS Testing--------------------------------------------------
 --Annotated_F (Fix name (n, n_tp) e tp) tp_fix
 --Fix String (String, Type) Exp Type
@@ -373,10 +420,10 @@ cpsTransExp (Annotated_F (Tuple (x:xs)) tp) cont                = do
 --lam x:int. x
 --main =  let prog = (Fix "Application" ("x", JClass "Int") (Var "x") (JClass "Int"))
 --            prog_tp = fromJust (tCheck prog [(" ", Unit)])
---        in  cpsTransProg (Annotated_F  prog prog_tp)
+--        in  runCPS $ cpsTransProg (Annotated_F  prog prog_tp)
 --------------------------TEST CASE 2 -----------------------------------------------------
 --lam x:int. (x + 3)
---main =  let prog = (Fix "Application" ("x", JClass "Int") (PrimOp (Var "x") (Arith J.Add) (Lit (Int 3))) (JClass "Int"))
---            prog_tp = fromJust (tCheck prog [(" ", Unit)])
---        in  cpsTransProg (Annotated_F  prog prog_tp) 
+main =  let prog = (Fix "Add_two_ints" ("x", JClass "Int") (PrimOp (Var "x") (Arith J.Add) (Lit (Int 3))) (JClass "Int"))
+            prog_tp = fromJust (tCheck prog [(" ", Unit)])
+        in runCPS $ cpsTransProg (Annotated_F  prog prog_tp) 
 --main = fromJust (tCheck (PrimOp (Lit (Int 3)) (Arith J.Add) (Lit (Int 3))) [(" ", Unit)])
