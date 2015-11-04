@@ -19,6 +19,8 @@ import           Data.Maybe (fromJust)
 import qualified Language.Java.Syntax as J (Op(..))
 import Control.Monad.State
 import qualified Core as C
+import qualified Data.Map as Map
+import           Data.Maybe (fromMaybe)
 
 type Name      = String
 type ClassName = String
@@ -356,36 +358,36 @@ cpsTransExp (Annotated_F (PrimOp e1 op e2) tp) cont             = do
                                                                         varName_Y = "Var_" ++ show (varID + 2)
                                                                     case (e1_tp, e2_tp) of
                                                                         (JClass "Int", JClass "Int") -> do
-                                                                                                          let lam_x2 = N_Fix functionName_2 [] [(varName_2, N_JClass "Int")] (N_Let (Declare_O varName_Y (Annotated_V (N_Var varName_1) (N_JClass "Int")) op (Annotated_V (N_Var varName_2) (N_JClass "Int"))) (N_App cont [] [(Annotated_V (N_Var varName_Y) (N_JClass "Int"))]) )
+                                                                                                          let lam_x2 = N_Fix functionName_2 [] [(varName_2, cpsTransType e2_tp)] (N_Let (Declare_O varName_Y (Annotated_V (N_Var varName_1) (N_JClass "Int")) op (Annotated_V (N_Var varName_2) (N_JClass "Int"))) (N_App cont [] [(Annotated_V (N_Var varName_Y) (N_JClass "Int"))]) )
                                                                                                               lam_x2_cont = cpsTransCont (JClass "Int")
                                                                                                               lam_x1_cont = cpsTransCont (JClass "Int")
                                                                                                           modify (\s -> s {varNameID = varID + 3,funcNameID = funcID + 2, varEnv = (varName_1, N_JClass "Int") : (varName_2, N_JClass "Int") : (varName_Y, cpsTransType tp) : varEnvironment}) 
                                                                                                           cps_rest <- cpsTransExp (Annotated_F e2 e2_tp) (Annotated_V lam_x2 lam_x2_cont)
-                                                                                                          let lam_x1 = N_Fix functionName_1 [] [(varName_1, N_JClass "Int")] (cps_rest)
+                                                                                                          let lam_x1 = N_Fix functionName_1 [] [(varName_1, cpsTransType e1_tp)] (cps_rest)
                                                                                                           cpsTransExp (Annotated_F e1 e1_tp) (Annotated_V lam_x1 lam_x1_cont)
                                                                         (JClass "Bool", JClass "Bool") -> do
-                                                                                                            let lam_x2 = N_Fix functionName_2 [] [(varName_2, N_JClass "Bool")] (N_Let (Declare_O varName_Y (Annotated_V (N_Var varName_1) (N_JClass "Bool")) op (Annotated_V (N_Var varName_2) (N_JClass "Bool"))) (N_App cont [] [(Annotated_V (N_Var varName_Y) (N_JClass "Bool"))]) )
+                                                                                                            let lam_x2 = N_Fix functionName_2 [] [(varName_2, cpsTransType e2_tp)] (N_Let (Declare_O varName_Y (Annotated_V (N_Var varName_1) (N_JClass "Bool")) op (Annotated_V (N_Var varName_2) (N_JClass "Bool"))) (N_App cont [] [(Annotated_V (N_Var varName_Y) (N_JClass "Bool"))]) )
                                                                                                                 lam_x2_cont = cpsTransCont (JClass "Bool")
                                                                                                                 lam_x1_cont = cpsTransCont (JClass "Bool")
                                                                                                             modify (\s -> s {varNameID = varID + 3,funcNameID = funcID + 2, varEnv = (varName_1, N_JClass "Bool") : (varName_2, N_JClass "Bool") : (varName_Y, cpsTransType tp) : varEnvironment}) 
                                                                                                             cps_rest <- cpsTransExp (Annotated_F e2 e2_tp) (Annotated_V lam_x2 lam_x2_cont)
-                                                                                                            let lam_x1 = N_Fix functionName_1 [] [(varName_1, N_JClass "Bool")] (cps_rest)
+                                                                                                            let lam_x1 = N_Fix functionName_1 [] [(varName_1, cpsTransType e1_tp)] (cps_rest)
                                                                                                             cpsTransExp (Annotated_F e1 e1_tp) (Annotated_V lam_x1 lam_x1_cont)
                                                                         (JClass "Char", JClass "Char") -> do
-                                                                                                            let lam_x2 = N_Fix functionName_2 [] [(varName_2, N_JClass "Char")] (N_Let (Declare_O varName_Y (Annotated_V (N_Var varName_1) (N_JClass "Char")) op (Annotated_V (N_Var varName_2) (N_JClass "Char"))) (N_App cont [] [(Annotated_V (N_Var varName_Y) (N_JClass "Char"))]) )
+                                                                                                            let lam_x2 = N_Fix functionName_2 [] [(varName_2, cpsTransType e2_tp)] (N_Let (Declare_O varName_Y (Annotated_V (N_Var varName_1) (N_JClass "Char")) op (Annotated_V (N_Var varName_2) (N_JClass "Char"))) (N_App cont [] [(Annotated_V (N_Var varName_Y) (N_JClass "Char"))]) )
                                                                                                                 lam_x2_cont = cpsTransCont (JClass "Char")
                                                                                                                 lam_x1_cont = cpsTransCont (JClass "Char")
                                                                                                             modify (\s -> s {varNameID = varID + 3,funcNameID = funcID + 2, varEnv = (varName_1, N_JClass "Char") : (varName_2, N_JClass "Char") : (varName_Y, cpsTransType tp) : varEnvironment}) 
                                                                                                             cps_rest <- cpsTransExp (Annotated_F e2 e2_tp) (Annotated_V lam_x2 lam_x2_cont)
-                                                                                                            let lam_x1 = N_Fix functionName_1 [] [(varName_1, N_JClass "Char")] (cps_rest)
+                                                                                                            let lam_x1 = N_Fix functionName_1 [] [(varName_1, cpsTransType e1_tp)] (cps_rest)
                                                                                                             cpsTransExp (Annotated_F e1 e1_tp) (Annotated_V lam_x1 lam_x1_cont)
                                                                         (JClass "String", JClass "String") -> do
-                                                                                                                let lam_x2 = N_Fix functionName_2 [] [(varName_2, N_JClass "String")] (N_Let (Declare_O varName_Y (Annotated_V (N_Var varName_1) (N_JClass "String")) op (Annotated_V (N_Var varName_2) (N_JClass "String"))) (N_App cont [] [(Annotated_V (N_Var varName_Y) (N_JClass "String"))]) )
+                                                                                                                let lam_x2 = N_Fix functionName_2 [] [(varName_2, cpsTransType e2_tp)] (N_Let (Declare_O varName_Y (Annotated_V (N_Var varName_1) (N_JClass "String")) op (Annotated_V (N_Var varName_2) (N_JClass "String"))) (N_App cont [] [(Annotated_V (N_Var varName_Y) (N_JClass "String"))]) )
                                                                                                                     lam_x2_cont = cpsTransCont (JClass "String")
                                                                                                                     lam_x1_cont = cpsTransCont (JClass "String")
                                                                                                                 modify (\s -> s {varNameID = varID + 3,funcNameID = funcID + 2, varEnv = (varName_1, N_JClass "String") : (varName_2, N_JClass "String") : (varName_Y, cpsTransType tp) : varEnvironment}) 
                                                                                                                 cps_rest <- cpsTransExp (Annotated_F e2 e2_tp) (Annotated_V lam_x2 lam_x2_cont)
-                                                                                                                let lam_x1 = N_Fix functionName_1 [] [(varName_1, N_JClass "String")] (cps_rest)
+                                                                                                                let lam_x1 = N_Fix functionName_1 [] [(varName_1,cpsTransType e1_tp)] (cps_rest)
                                                                                                                 cpsTransExp (Annotated_F e1 e1_tp) (Annotated_V lam_x1 lam_x1_cont)
 cpsTransExp (Annotated_F (If e1 e2 e3) tp) cont                   = do
                                                                       tenv <- gets tCheckEnv
@@ -424,7 +426,6 @@ runCPS x = evalState x initial_state
             where initial_state = Environment { funcNameID = 0, varNameID = 0, tCheckEnv = [(" ", Unit)], varEnv = [(" ", N_Unit)]}
 
 ----------------------------------------CPS Evaluator------------------------------------------------
-
 type Env = [(String, Annotated_V)]
 type NTEnv = [(String, N_Type)]
 
@@ -443,7 +444,7 @@ evaluate (N_If av e1 e2) env tenv =
       eval_bool (Annotated_V (N_Var x) t) = 
         case lookup x env of
           Nothing -> error "Lookup Error2!"
-          Just av -> eval_bool av
+          Just av' -> eval_bool av'
 
       eval_bool (Annotated_V (N_Lit (Bool bv)) bt) = Just bv
 
@@ -457,17 +458,16 @@ evaluate (N_App av ts avs) env tenv = eval_app av where
   eval_app (Annotated_V (N_Var n) t) = 
     case lookup n env of
       Nothing -> error (show env++n)
-      Just av -> eval_app av
+      Just av' -> eval_app av'
 
   eval_app func@(Annotated_V (N_Fix f tns pts body) t) = evaluate body newEnv newTEnv
-        where newEnv = [(f, func)] ++ (zip (map fst pts)) (map eval_arg avs) ++ env
+        where newEnv = [(f, func)] ++ (zip (map fst pts) (map eval_arg avs)) ++ env
               newTEnv = (zip tns ts) ++ tenv
               eval_arg (Annotated_V (N_Var n) t) = 
                 case lookup n env of
                   Nothing -> error (show env++n)
-                  Just av -> eval_arg av
+                  Just av' -> eval_arg av'
               eval_arg arg = arg
-  eval_app others = error ("N_App left is not a function type ----> N_App " ++ (show others) ++ " " ++ (show ts) ++ " " ++ (show avs))
 
 evaluate (N_Halt (Annotated_V v t)) env tenv = Just (eval_value v env) where
 
@@ -493,10 +493,10 @@ eval_op (Arith J.Mult) (N_Lit (Int a)) (N_Lit (Int b)) = Just (Annotated_V (N_Li
 --eval_op (Arith J.Div) (N_Lit (Int a)) (N_Lit (Int b)) = Just (Annotated_V (N_Lit (Int (a 'div' b))) (N_JClass "Integer")) 
 --eval_op (Arith J.Rem) (N_Lit (Int a)) (N_Lit (Int b)) = Just (Annotated_V (N_Lit (Int (a % b))) (N_JClass "Integer"))  
 eval_op (Compare J.GThan) (N_Lit (Int a)) (N_Lit (Int b)) = Just (Annotated_V (N_Lit (Bool (a > b))) (N_JClass "Bool"))  
-eval_op (Compare J.Equal) (N_Lit (Int a)) (N_Lit (Int b)) = Just (Annotated_V (N_Lit (Bool (a == b))) (N_JClass "Bool"))     
 eval_op (Compare J.GThanE) (N_Lit (Int a)) (N_Lit (Int b)) = Just (Annotated_V (N_Lit (Bool (a >= b))) (N_JClass "Bool")) 
 eval_op (Compare J.LThan) (N_Lit (Int a)) (N_Lit (Int b)) = Just (Annotated_V (N_Lit (Bool (a < b))) (N_JClass "Bool")) 
 eval_op (Compare J.LThanE) (N_Lit (Int a)) (N_Lit (Int b)) = Just (Annotated_V (N_Lit (Bool (a <= b))) (N_JClass "Bool")) 
+eval_op (Compare J.Equal) (N_Lit (Int a)) (N_Lit (Int b)) = Just (Annotated_V (N_Lit (Bool (a == b))) (N_JClass "Bool"))     
 
 ----------------------------------------CPS Testing--------------------------------------------------
 --Annotated_F (Fix name (n, n_tp) e tp) tp_fix
@@ -559,10 +559,11 @@ eval_op (Compare J.LThanE) (N_Lit (Int a)) (N_Lit (Int b)) = Just (Annotated_V (
 --                        ) 
 --                        (JClass "Int")
 --                  )
---           runProg = App prog (Lit (Int 6))
+--           runProg = App prog (Lit (Int 2))
 --           prog_tp = fromJust (tCheck runProg [(" ", Unit)])
---        in (runCPS $ cpsTransProg (Annotated_F  runProg prog_tp) )
+--        in evaluate (runCPS $ cpsTransProg (Annotated_F  runProg prog_tp) ) [(" ", Annotated_V (N_Lit (Int 0)) (N_JClass "Int") )] [(" ", N_Unit)]
         --in fromJust (tCheck prog [(" ", Unit)])
+        --in (runCPS $ cpsTransProg (Annotated_F  runProg prog_tp) )
 -----------------------------TEST CASE 6 -----------------------------------------------------
 --main = let prog = (If (Lit (Int 1)) (Lit (Int 2)) (Lit (Int 3)))
 --           prog_tp = fromJust (tCheck prog [(" ", Unit)])
@@ -668,16 +669,16 @@ eval_op (Compare J.LThanE) (N_Lit (Int a)) (N_Lit (Int b)) = Just (Annotated_V (
 --      ]
 -----------------------------TEST CASE 12 -----------------------------------------------------
 --f 1 = 1 , f n = f (n-1) 
-main = let prog = (Fix "recursive" ("n", JClass "Int") 
-                        (If (PrimOp (Var "n") (Compare J.Equal) (Lit (Int 1)) ) 
-                            (Lit (Int 1))
-                            (App (Var "recursive") (PrimOp (Var "n") (Arith J.Sub) (Lit (Int 1))) ) 
-                        ) 
-                        (JClass "Int")
-                  )
-           runProg = App prog (Lit (Int 10000))
-           prog_tp = fromJust (tCheck runProg [(" ", Unit)])
-        in evaluate (runCPS $ cpsTransProg (Annotated_F runProg prog_tp) ) [(" ", Annotated_V (N_Lit (Int 0)) (N_JClass "Int") )] [(" ", N_Unit)]
+--main = let prog = (Fix "recursive" ("n", JClass "Int") 
+--                        (If (PrimOp (Var "n") (Compare J.Equal) (Lit (Int 1)) ) 
+--                            (Lit (Int 1))
+--                            (App (Var "recursive") (PrimOp (Var "n") (Arith J.Sub) (Lit (Int 1))) )
+--                        ) 
+--                        (JClass "Int")
+--                  )
+--           runProg = App prog (Lit (Int 6))
+--           prog_tp = fromJust (tCheck runProg [(" ", Unit)])
+        --in evaluate (runCPS $ cpsTransProg (Annotated_F runProg prog_tp) ) [(" ", Annotated_V (N_Lit (Int 0)) (N_JClass "Int") )] [(" ", N_Unit)]
         --in print prog
         --in (runCPS $ cpsTransProg (Annotated_F runProg prog_tp) )
         --in fromJust (tCheck runProg [(" ", Unit)])
@@ -692,9 +693,26 @@ main = let prog = (Fix "recursive" ("n", JClass "Int")
 
 
 ----------------------------Convert CPS back to Core------------------------------------------------------------------------------
---converTypeBack :: N_Type -> C.Type t
---converTypeBack (N_TVar name) = C.TVar name (\x -> x)
 
---convetExpBack :: N_Exp -> C.Expr t e
+type TVarMap t  = Map.Map String t
+type VarMap t e = Map.Map String (C.Expr t e)
 
---convertValue :: N_Exp -> C.Expr t e
+convertType :: TVarMap t -> N_Type -> C.Type t
+convertType d (N_TVar name) = C.TVar name (fromMaybe (error ("Error Occur when converting N_TVar " ++ name)) (Map.lookup name d) )
+convertType _ (N_JClass name) = C.JClass name
+convertType _ (N_Void) = C.Unit
+convertType _ (N_Unit) = C.Unit
+convertType d (N_TupleType xs) = C.Product (map (convertType d) xs)
+convertType d (N_Forall ns tps void) = if (length ns) == 0 then subCvrtFun tps else subCvrtForall ns 
+                                         where subCvrtFun tps = case tps of 
+                                                                    [] ->  convertType d void
+                                                                    (t:ts) -> C.Fun (convertType d t) (subCvrtFun ts) 
+                                               subCvrtForall ns = case ns of
+                                                                      [] -> convertType d (N_Forall [] tps void)
+                                                                      (n:ns') -> C.Forall n (\n' -> convertType (Map.insert n n' d) (N_Forall ns' tps void)) 
+
+
+--convertNExp :: (TVarMap t, VarMap t e) -> N_Exp -> C.Expr t e
+--convertNExp (d, g) = go
+--  where
+--    go (N_Let decla exp) = 
