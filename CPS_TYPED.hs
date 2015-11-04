@@ -118,8 +118,8 @@ tCheck (TApp e t) tenv          = Just (substitute (Forall alpha tp) (alpha, t))
 tCheck (PrimOp e1 op e2) tenv   =
   case (tCheck e1 tenv, tCheck e2 tenv) of
     (Just t1, Just t2) -> tbinary op t1 t2
-    _ -> error "PrimOp Error Occurs!"
-
+    (Nothing, _)  -> error "PrimOp Left Error Occurs!"
+    (Just t1, Nothing)  -> error "PrimOp Right Error Occurs!"
 tCheck (If p e1 e2) tenv        =
   case tCheck p tenv of
     Nothing -> Nothing
@@ -144,8 +144,10 @@ tCheck (Tuple (x:xs)) tenv      =  let out = TupleType (fromJust((tCheck x tenv)
                                    in 
                                       Just out
 
-tCheck (Fix n1 (n2, t1) e t2) tenv  = Just (Fun t1 t2)
-
+tCheck (Fix n1 (n2, t1) e t2) tenv  = case tCheck e ((n2, t1) : (n1, (Fun t1 t2)) : tenv) of
+                                        Nothing -> error "Fix Error Occurs!"
+                                        Just t -> if (t == t2) then (Just (Fun t1 t2)) else error "Fix Type Does Not Match !!"
+                                        
 data Annotated_F = Annotated_F Exp Type
 
 --------------------------------Define CPSK data type ------------------------------------------------
@@ -261,9 +263,11 @@ cpsTransExp (Annotated_F (App e1 e2) tp) cont                  =  do
                                                                          x2_tp   = cpsTransType e2_tp
                                                                          lam_x2  = N_Fix functionName_2 [] [(varName_2, x2_tp)] (N_App (Annotated_V (N_Var varName_1) x1_tp) [] [(Annotated_V (N_Var varName_2) x2_tp), cont])
                                                                      cps_lam_x2 <- cpsTransExp u2 (Annotated_V lam_x2 u2_cont)
+                                                                     --cpsTransExp u2 (Annotated_V lam_x2 u2_cont)
                                                                      let lam_x1  = N_Fix functionName_1 [] [(varName_1, x1_tp)] cps_lam_x2
                                                                      modify (\s -> s {varNameID = varID + 2,funcNameID = funcID + 2, varEnv = (varName_1, x1_tp) : (varName_2, x2_tp) : varEnvironment})
                                                                      cpsTransExp u1 (Annotated_V lam_x1 u1_cont)
+
 cpsTransExp (Annotated_F (Fix name (n, n_tp) e tp) tp_fix) cont = let n_trans_tp  = cpsTransType n_tp
                                                                       c_tp   = cpsTransCont tp
                                                                       fix_tp = cpsTransType tp_fix
@@ -272,7 +276,8 @@ cpsTransExp (Annotated_F (Fix name (n, n_tp) e tp) tp_fix) cont = let n_trans_tp
                                                                          varEnvironment <- gets varEnv
                                                                          tenv <- gets tCheckEnv
                                                                          let varName = "Var_" ++ show varID
-                                                                         modify (\s -> s {varNameID = varID + 1, varEnv = (varName, c_tp) : varEnvironment, tCheckEnv = (n, n_tp) : tenv })
+                                                                             new_tenv = fromJust (tCheck (Fix name (n, n_tp) e tp) tenv) 
+                                                                         modify (\s -> s {varNameID = varID + 1, varEnv = (varName, c_tp) : varEnvironment, tCheckEnv = (n, n_tp):(name, new_tenv): tenv })
                                                                          cps_e <- (cpsTransExp (Annotated_F e tp) (Annotated_V (N_Var varName) c_tp))
                                                                          let fix_trans = N_Fix name [] [(n, n_trans_tp),(varName, c_tp)] cps_e
                                                                          return (N_App cont [] [(Annotated_V fix_trans fix_tp)])
@@ -534,8 +539,8 @@ eval_op (Compare J.LThanE) (N_Lit (Int a)) (N_Lit (Int b)) = Just (Annotated_V (
 --APP (lam x:int. (x + 3)) (Lit Int 3)
 --main =  let prog = App (Fix "Add_two_ints" ("x", JClass "Int") (PrimOp (Var "x") (Arith J.Add) (Lit (Int 3))) (JClass "Int")) (Lit (Int 3))
 --            prog_tp = fromJust (tCheck prog [(" ", Unit)])
---        in evaluate (runCPS $ cpsTransProg (Annotated_F  prog prog_tp)) [(" ", Annotated_V (N_Lit (Int 0)) (N_JClass "Int") )] [(" ", N_Unit)]
-        --in (runCPS $ cpsTransProg (Annotated_F  prog prog_tp))
+--        --in evaluate (runCPS $ cpsTransProg (Annotated_F  prog prog_tp)) [(" ", Annotated_V (N_Lit (Int 0)) (N_JClass "Int") )] [(" ", N_Unit)]
+--        in (runCPS $ cpsTransProg (Annotated_F  prog prog_tp))
 -----------------------------TEST CASE 5 -----------------------------------------------------
 --main = let prog = (Fix "factorial" ("n", JClass "Int") 
 --                        (If (PrimOp (Var "n") (Compare J.Equal) (Lit (Int 1)) ) 
@@ -656,10 +661,12 @@ eval_op (Compare J.LThanE) (N_Lit (Int a)) (N_Lit (Int b)) = Just (Annotated_V (
 main = let prog = (Fix "recursive" ("n", JClass "Int") 
                         (If (PrimOp (Var "n") (Compare J.Equal) (Lit (Int 1)) ) 
                             (Lit (Int 1))
-                            (App prog (PrimOp (Var "n") (Arith J.Sub) (Lit (Int 1))) ) 
+                            (App (Var "recursive") (PrimOp (Var "n") (Arith J.Sub) (Lit (Int 1))) ) 
                         ) 
                         (JClass "Int")
                   )
-           --runProg = App prog (Lit (Int 6))
+           runProg = App prog (Lit (Int 6))
            prog_tp = fromJust (tCheck prog [(" ", Unit)])
-        in (runCPS $ cpsTransProg (Annotated_F prog prog_tp) )
+        --in evaluate (runCPS $ cpsTransProg (Annotated_F runProg prog_tp) ) [(" ", Annotated_V (N_Lit (Int 0)) (N_JClass "Int") )] [(" ", N_Unit)]
+        --in print prog
+        in (runCPS $ cpsTransProg (Annotated_F runProg prog_tp) )
