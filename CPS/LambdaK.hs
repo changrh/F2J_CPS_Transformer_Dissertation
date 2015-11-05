@@ -39,7 +39,7 @@ data N_Value = N_Var Name
            ----Fix x [a] (X1:T1,.....Xn:Tn). e
            ----TypePara is a type argument used in N_Type in the binder
            ----Parameter is a String, which indicates a corresponding N_Value in the Fix Body  
-             | N_Tuple [N_Value]
+             | N_Tuple [Annotated_V]
   deriving (Eq, Show)
 
 ------------------In Declaration N_Value should be N_Var Name---------------
@@ -75,7 +75,7 @@ evaluate :: N_Exp -> Env -> NTEnv -> Maybe N_Value
 evaluate (N_Let dec body) env tenv = evaluate body newEnv tenv
   where newEnv = case dec of 
                   Declare_V n v -> (n, v):env
-                  Declare_T n idx tuple -> (n, (fromJust (eval_tuple idx tuple))):env                  
+                  --Declare_T n idx tuple -> (n, (fromJust (eval_tuple idx tuple))):env                  
                   Declare_O n (Annotated_V v1 t1) op (Annotated_V v2 t2) -> (n, (fromJust (eval_op op (eval_value v1 env) (eval_value v2 env)))):env
                  
 evaluate (N_If av e1 e2) env tenv = 
@@ -128,9 +128,9 @@ evaluate (N_App av ts avs) env tenv = eval_app av where
 evaluate (N_Halt (Annotated_V v t)) env tenv = Just (eval_value v env) where
 
 
-eval_tuple :: Int -> Annotated_V -> Maybe Annotated_V
-eval_tuple idx (Annotated_V (N_Tuple xs) (N_TupleType ys)) = Just (Annotated_V (xs!!idx) (ys!!idx))
-eval_tuple _ _ = Nothing
+--eval_tuple :: Int -> Annotated_V -> Maybe Annotated_V
+--eval_tuple idx (Annotated_V (N_Tuple xs) (N_TupleType ys)) = Just (Annotated_V (xs!!idx) (ys!!idx))
+--eval_tuple _ _ = Nothing
 
 eval_value :: N_Value -> Env -> N_Value
 eval_value (N_Var x) env =

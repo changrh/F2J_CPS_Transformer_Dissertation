@@ -22,6 +22,10 @@ import           CPS.LambdaF
 import           CPS.LambdaK
 import           CPS.Transformer
 import qualified Src as S
+import qualified Data.Map as Map
+import qualified Core as C
+
+
 
 ----------------------------------------Evaluator Test--------------------------------------------------
 
@@ -244,9 +248,10 @@ main = let prog = (Fix "factorial" ("n", JClass "Int")
                   )
            runProg = App prog (Lit (S.Int 10))
            prog_tp = fromJust (tCheck runProg [(" ", Unit)])
-        --in evaluate (runCPS $ cpsTransProg (Annotated_F  runProg prog_tp) ) [(" ", Annotated_V (N_Lit (Int 9999)) (N_JClass "Int") )] [(" ", N_Unit)]
+--        in evaluate (runCPS $ cpsTransProg (Annotated_F  runProg prog_tp) ) [(" ", Annotated_V (N_Lit (S.Int 9999)) (N_JClass "Int") )] [(" ", N_Unit)]
         --in fromJust (tCheck prog [(" ", Unit)])
-        in (runCPS $ cpsTransProg (Annotated_F  runProg prog_tp) )
+        in C.prettyExpr $ convertNExp (Map.empty, Map.empty) (runCPS $ cpsTransProg (Annotated_F  runProg prog_tp) )
+        --in (runCPS $ cpsTransProg (Annotated_F  runProg prog_tp) )
 -----------------------------TEST CASE 6 -----------------------------------------------------
 --main = let prog = (If (Lit (Int 1)) (Lit (Int 2)) (Lit (Int 3)))
 --           prog_tp = fromJust (tCheck prog [(" ", Unit)])
@@ -322,10 +327,10 @@ main = let prog = (Fix "factorial" ("n", JClass "Int")
 --                                (N_Forall [] [(N_JClass "Int")] N_Void)
 --                              ) 
 --                            []
---                            [(Annotated_V (N_Lit (Int 1)) (N_JClass "Int"))]
+--                            [(Annotated_V (N_Lit (S.Int 1)) (N_JClass "Int"))]
 --                          )
 --                          (N_Let 
---                            (Declare_O "x" (Annotated_V (N_Var "n") (N_JClass "Int")) (Arith J.Sub) (Annotated_V (N_Lit (Int 1)) (N_JClass "Int")))
+--                            (Declare_O "x" (Annotated_V (N_Var "n") (N_JClass "Int")) (S.Arith J.Sub) (Annotated_V (N_Lit (S.Int 1)) (N_JClass "Int")))
 --                            (N_App
 --                              (Annotated_V (N_Var "f") (N_Forall [] [(N_JClass "Int")] N_Void))
 --                              []
@@ -336,7 +341,7 @@ main = let prog = (Fix "factorial" ("n", JClass "Int")
 --                                    [] 
 --                                    [("y", (N_JClass "Int"))]  
 --                                    (N_Let
---                                      (Declare_O "z" (Annotated_V (N_Var "n") (N_JClass "Int")) (Arith J.Mult) (Annotated_V (N_Var "y") (N_JClass "Int")))
+--                                      (Declare_O "z" (Annotated_V (N_Var "n") (N_JClass "Int")) (S.Arith J.Mult) (Annotated_V (N_Var "y") (N_JClass "Int")))
 --                                      (N_App
 --                                        (Annotated_V 
 --                                          (N_Var "k")
@@ -361,7 +366,7 @@ main = let prog = (Fix "factorial" ("n", JClass "Int")
 --                        (N_Forall [] [(N_JClass "Int")] N_Void)
 --                      )
 --                      []
---                      [ (Annotated_V (N_Lit (Int 60)) (N_JClass "Int")), 
+--                      [ (Annotated_V (N_Lit (S.Int 60)) (N_JClass "Int")), 
 --                        (Annotated_V 
 --                          (N_Fix 
 --                            "" 
@@ -373,7 +378,7 @@ main = let prog = (Fix "factorial" ("n", JClass "Int")
 --                        )
 --                      ]
 --                     )
---           in evaluate fp [(" ", Annotated_V (N_Lit (Int 9999)) (N_JClass "Int") )] [(" ", N_Unit)]
+--           in evaluate fp [(" ", Annotated_V (N_Lit (S.Int 9999)) (N_JClass "Int") )] [(" ", N_Unit)]
 -----------------------------TEST CASE 14 -----------------------------------------------------
 
 --main = let prog = N_App 
