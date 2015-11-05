@@ -43,6 +43,7 @@ data Exp
   | Fix String (String, Type) Exp Type
   | Let (String, Type) Exp Exp
   deriving (Eq, Show)
+------------------------All The Type Checker For SystemF----------------------
 
 type TEnv = [(String, Type)]
 
@@ -62,9 +63,7 @@ tbinary :: Operator -> Type -> Type -> Maybe Type
 tbinary (Arith _) (JClass t1) (JClass t2)  =  Just (JClass t1)
 tbinary (Compare _) (JClass t1)  (JClass t2) = Just (JClass "Bool")
 tbinary (Logic _) (JClass "Bool")  (JClass "Bool")   = Just (JClass "Bool")
-tbinary _ _ _ = Nothing
-
-a = Lam ("x", (JClass "Integer")) (PrimOp (Var "x") (Arith J.Add) (Lit (Int 3)))
+tbinary _ _ _ = error "tbinary Error Occurs!"
 
 tCheck :: Exp -> TEnv -> Maybe Type
 tCheck (Var n) tenv             = lookup n tenv
@@ -76,25 +75,29 @@ tCheck (Lit n) tenv             =
     Int t -> Just (JClass "Int")
     String t -> Just (JClass "String")
     Bool t -> Just (JClass "Bool")
-    _ -> Nothing
+    _ -> error "Lit Error Occurs!"
 tCheck (App e1 e2) tenv           = 
   case (tCheck e1 tenv, tCheck e2 tenv) of
     (Just t1, Just t2) -> case t1 of 
                             Fun inType outType -> if inType == t2 then Just (outType) else Nothing
-                            _ -> Nothing
-    _ -> Nothing
+                            _ -> error ("App Left is Not a Function Type! ----> App " ++ show e1 ++ "  " ++ show e2)
+    (Nothing, _) -> error "App Left Error Occurs!"
+    (Just t1, Nothing) -> error "App Right Error Occurs!"
+    _ -> error "App Error Occurs!"
 
 tCheck (Lam (n, t) e) tenv      = 
   case tCheck e ((n,t) : tenv) of 
       Just t1 -> Just (Fun t t1)
-      _ -> Nothing 
+      _ -> error "Lam Error Occurs!"
 
 tCheck (BLam n e) tenv          = 
   case tCheck e tenv of 
     Just t1 -> Just (Forall n t1)
-    _ -> Nothing
+    _ -> error "BLam Error Occurs!"
 
-tCheck (Let (n, t1) e body) tenv = Just Unit
+tCheck (Let (n, t1) e body) tenv = case tCheck body ((n,t1):tenv) of
+                                        Nothing -> error "Error Occurs in Let type Checker !"
+                                        Just t1 -> Just t1
 
 tCheck (TApp e t) tenv          = Just (substitute (Forall alpha tp) (alpha, t))
   where Forall alpha tp = fromJust (tCheck e tenv)
@@ -102,20 +105,21 @@ tCheck (TApp e t) tenv          = Just (substitute (Forall alpha tp) (alpha, t))
 tCheck (PrimOp e1 op e2) tenv   =
   case (tCheck e1 tenv, tCheck e2 tenv) of
     (Just t1, Just t2) -> tbinary op t1 t2
-    _ -> Nothing
-
+    (Nothing, _)  -> error "PrimOp Left Error Occurs!"
+    (Just t1, Nothing)  -> error "PrimOp Right Error Occurs!"
 tCheck (If p e1 e2) tenv        =
   case tCheck p tenv of
-    Nothing -> Nothing
+    Nothing -> error ("If Error occurs " ++ show p)
     Just (JClass "Bool") -> case tCheck e1 tenv of 
-                              Nothing -> Nothing
-                              Just t1 -> if (Just t1 == (tCheck e2 tenv)) then Just t1 else Nothing
-    _ -> Nothing
-
+                              Nothing -> error "If Bool Error Occurs!"
+                              Just t1 -> if (Just t1 == (tCheck e2 tenv)) then (Just t1) else (error "Error occured Bool") 
+    Just (JClass "Int") -> case tCheck e1 tenv of 
+                              Nothing -> error "If Int Error Occurs!"
+                              Just t1 -> if (Just t1 == (tCheck e2 tenv)) then (Just t1) else (error "Error occured Int")
 tCheck (Proj index e) tenv        = 
   case e of 
     Tuple xs -> tCheck (xs !! index) tenv
-    _ -> Nothing
+    _ -> error "Proj Error Occurs!"
 
 
 tCheck (Tuple (x:xs)) tenv      =  let out = TupleType (fromJust((tCheck x tenv)):subList xs tenv)
@@ -125,4 +129,7 @@ tCheck (Tuple (x:xs)) tenv      =  let out = TupleType (fromJust((tCheck x tenv)
                                    in 
                                       Just out
 
-tCheck (Fix n1 (n2, t1) e t2) tenv  = Just (Fun t1 t2)
+tCheck (Fix n1 (n2, t1) e t2) tenv  = case tCheck e ((n2, t1) : (n1, (Fun t1 t2)) : tenv) of
+                                        Nothing -> error ("Fix Error Occurs!" ++ show ((n2, t1) : (n1, (Fun t1 t2)) : tenv))
+                                        Just t -> if (t == t2) then Just (Fun t1 t2) else error "Fix Type Does Not Match !!"
+                                        

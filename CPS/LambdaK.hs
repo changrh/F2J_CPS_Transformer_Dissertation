@@ -18,47 +18,53 @@ import           CPS.LamSrc
 import           Data.Maybe (fromJust)
 import qualified Language.Java.Syntax as J (Op(..))
 
+
+
+-- CPSK Types.
 data N_Type = N_TVar Name
-            | N_JClass Name
-            | N_Forall [TypeVarName] [N_Type] N_Type
-            -- Forall [Type Variables] [Input types] [Output Types]
-            | N_TupleType [N_Type]
             | N_Void
+            | N_TupleType [N_Type]
+            | N_Forall [Name] [N_Type] N_Type
+--------------Forall [Type_Arguments] N_Fun [N_Type] N_Void
+--------------Forall must follow the above rule
             | N_Unit
+            | N_JClass Name
   deriving (Eq, Show, Read)
+  
+type TypeArgs = String
 
 data N_Value = N_Var Name
              | N_Lit Lit
-             | N_Fix String [TypeVarName] [(Paramter, N_Type)] N_Exp
-             --Fix Function_Name [Type Variable] (X1:T1,.....Xn:Tn) Function_Body
-             --TypeParaName is a type argument used in N_Type in the binder
-             --Parameter is a String, which indicates a corresponding N_Value in the Body  
-             --Is used to give types to paramters in N_Exp
+             | N_Fix String [TypeArgs] [(Paramter, N_Type)] N_Exp
+           ----Fix x [a] (X1:T1,.....Xn:Tn). e
+           ----TypePara is a type argument used in N_Type in the binder
+           ----Parameter is a String, which indicates a corresponding N_Value in the Fix Body  
              | N_Tuple [N_Value]
   deriving (Eq, Show)
 
-data Declaration = Declare_V VarName Annotated_V
+------------------In Declaration N_Value should be N_Var Name---------------
+data Declaration = Declare_V String  Annotated_V
             ------- x = v  here x is a N_Var
-                 | Declare_T VarName Int Annotated_V
+                 | Declare_T String Int Annotated_V
             ------- x = Proj Int Tuple [N_Value]
-                 | Declare_O VarName Annotated_V Operator Annotated_V
+                 | Declare_O String Annotated_V Operator Annotated_V
             ------- x = v1 Op v2
   deriving (Eq, Show)
-
 data N_Exp = N_Let Declaration N_Exp
-            --Let d in e 
+        -----Let d in e 
            | N_If Annotated_V N_Exp N_Exp
-            --If (p, e1, e2)
+        -----If (v, e1, e2)
            | N_App Annotated_V [N_Type] [Annotated_V]
-            --N_App Fix [Type_Arguments] [correspond to Fix Parameters]
-            --This is a hybrid of App and TApp N_App N_Value [String] is a TApp for Fix
-            --And N_App N_Value [] [N_Value] is an App  
+        -----N_App Fix [Type_Arguments] [correspond to Fix Parameters]
+        -----This is a hybrid of App and TApp N_App N_Value [String] is a TApp for Fix
+        -----And N_App N_Value [] [N_Value] is an App  
            | N_Halt Annotated_V
-            --Halt [T] V   
+        -----Halt [T] V   
   deriving (Eq, Show)
 
 data Annotated_V = Annotated_V N_Value N_Type
   deriving (Eq, Show)
+
 
 ---------------------------------------- Evaluator --------------------------------------------------
 type Env = [(String, Annotated_V)]
@@ -135,15 +141,16 @@ eval_value (N_Lit v) env = N_Lit v
 eval_value _ _ = error "Unknow value"
 
 eval_op :: Operator -> N_Value -> N_Value -> Maybe Annotated_V
-eval_op (Arith J.Add) (N_Lit (Int a)) (N_Lit (Int b)) = Just (Annotated_V (N_Lit (Int (a + b))) (N_JClass "Integer"))
-eval_op (Arith J.Sub) (N_Lit (Int a)) (N_Lit (Int b)) = Just (Annotated_V (N_Lit (Int (a - b))) (N_JClass "Integer")) 
-eval_op (Arith J.Mult) (N_Lit (Int a)) (N_Lit (Int b)) = Just (Annotated_V (N_Lit (Int (a * b))) (N_JClass "Integer")) 
+eval_op (Arith J.Add) (N_Lit (Int a)) (N_Lit (Int b)) = Just (Annotated_V (N_Lit (Int (a + b))) (N_JClass "Int"))
+eval_op (Arith J.Sub) (N_Lit (Int a)) (N_Lit (Int b)) = Just (Annotated_V (N_Lit (Int (a - b))) (N_JClass "Int")) 
+eval_op (Arith J.Mult) (N_Lit (Int a)) (N_Lit (Int b)) = Just (Annotated_V (N_Lit (Int (a * b))) (N_JClass "Int")) 
 --eval_op (Arith J.Div) (N_Lit (Int a)) (N_Lit (Int b)) = Just (Annotated_V (N_Lit (Int (a 'div' b))) (N_JClass "Integer")) 
 --eval_op (Arith J.Rem) (N_Lit (Int a)) (N_Lit (Int b)) = Just (Annotated_V (N_Lit (Int (a % b))) (N_JClass "Integer"))  
 eval_op (Compare J.GThan) (N_Lit (Int a)) (N_Lit (Int b)) = Just (Annotated_V (N_Lit (Bool (a > b))) (N_JClass "Bool"))  
 eval_op (Compare J.GThanE) (N_Lit (Int a)) (N_Lit (Int b)) = Just (Annotated_V (N_Lit (Bool (a >= b))) (N_JClass "Bool")) 
 eval_op (Compare J.LThan) (N_Lit (Int a)) (N_Lit (Int b)) = Just (Annotated_V (N_Lit (Bool (a < b))) (N_JClass "Bool")) 
 eval_op (Compare J.LThanE) (N_Lit (Int a)) (N_Lit (Int b)) = Just (Annotated_V (N_Lit (Bool (a <= b))) (N_JClass "Bool")) 
+eval_op (Compare J.Equal) (N_Lit (Int a)) (N_Lit (Int b)) = Just (Annotated_V (N_Lit (Bool (a == b))) (N_JClass "Bool"))     
 
 
 

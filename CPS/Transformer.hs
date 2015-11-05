@@ -25,6 +25,8 @@ import           CPS.LambdaF
 import           CPS.LambdaK
 import           CPS.LamSrc
 
+------------------------------CPS Transformation from SystemF to CPSK----------------------------------
+
 data Environment = Environment { funcNameID :: Int,
                                  varNameID :: Int,
                                  tCheckEnv :: TEnv,
@@ -265,19 +267,22 @@ convertType d (N_Forall ns tps void) = if (length ns) == 0 then subCvrtFun tps e
                                                                       [] -> convertType d (N_Forall [] tps void)
                                                                       (n:ns') -> C.Forall n (\n' -> convertType (Map.insert n n' d) (N_Forall ns' tps void)) 
 
+convertNValue :: (TVarMap t, VarMap t e) -> N_Value -> C.Expr t e
+convertNValue (d, g) = go
+  where 
+    go (N_Var name) = fromMaybe (error ("Error Occur when converting N_Var " ++ show name)) (Map.lookup name g)
+    go (N_Lit lit)  = C.Lit lit
+    go (N_Fix name tps avs exp) = if (length tps) == 0 then subCvrtLam avs (d,g) else subCvrtBLam tps avs (d, g)
+                                    where subCvrtLam avs (d, g) = case avs of
+                                                                        [] -> convertNExp (d,g) exp
+                                                                        (n, t):ys -> C.Lam n (convertType d t) (\x -> subCvrtLam ys (d, Map.insert n (C.Var n x) g)) 
+                                          subCvrtBLam tps (d, g) = case tps of
+                                                                        [] -> subCvrtLam avs (d,g)
+                                                                        (y:ys) -> C.BLam y (\x -> subCvrtBLam ys (Map.insert y x d, g))
+    go (N_Tuple es) = C.Tuple (map go es)
+
 
 --convertNExp :: (TVarMap t, VarMap t e) -> N_Exp -> C.Expr t e
 --convertNExp (d, g) = go
 --  where
---    go (N_Let decla exp) = case decla of 
---                                Declare_V name (Annotated_V e e_tp) ->  
-
---convertNValue :: (TVarMap t, VarMap t e) -> N_Value -> C.Expr t e
---convertNValue (d, g) = go
---  where 
---    go (N_Var name) = fromMaybe (error ("Error Occur when converting N_Var " ++ show name)) (Map.lookup name g)
---    go (N_Lit lit)  = C.Lit lit
---    go (N_Fix name tps avs exp) = if (length tps) == 0 then subCvrtLam avs exp else subCvrtBLam tps avs exp
---                                    where subCvrtLam avs exp = case avs of
---                                                                    [] -> 
---                                                                    (n, t):ys -> C.Lam n (convertType d t) (\x -> convertNExp (d, Map.insert n (C.Var n x) g) e) 
+--    go 
