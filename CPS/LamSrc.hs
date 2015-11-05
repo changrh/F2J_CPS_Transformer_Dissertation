@@ -23,12 +23,12 @@ type VarName      = String
 type ClassName    = String
 type Name         = String
 
-data Lit -- Data constructor names match Haskell types
-  = Int Integer
-  | String String
-  | Bool Bool
-  | Char Char
-  | UnitLit
-  deriving (Eq, Show)
+--data Lit -- Data constructor names match Haskell types
+--  = Int Integer
+--  | String String
+--  | Bool Bool
+--  | Char Char
+--  | UnitLit
+--  deriving (Eq, Show)
 
-data Operator = Arith J.Op | Compare J.Op | Logic J.Op deriving (Eq, Show)
+--data Operator = Arith J.Op | Compare J.Op | Logic J.Op deriving (Eq, Show)

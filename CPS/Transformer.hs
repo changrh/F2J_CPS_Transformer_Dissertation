@@ -272,7 +272,7 @@ convertNValue (d, g) = go
   where 
     go (N_Var name) = fromMaybe (error ("Error Occur when converting N_Var " ++ show name)) (Map.lookup name g)
     go (N_Lit lit)  = C.Lit lit
-    go (N_Fix name tps avs exp) = if (length tps) == 0 then subCvrtLam avs (d,g) else subCvrtBLam tps avs (d, g)
+    go (N_Fix name tps avs exp) = if (length tps) == 0 then subCvrtLam avs (d,g) else subCvrtBLam tps (d, g)
                                     where subCvrtLam avs (d, g) = case avs of
                                                                         [] -> convertNExp (d,g) exp
                                                                         (n, t):ys -> C.Lam n (convertType d t) (\x -> subCvrtLam ys (d, Map.insert n (C.Var n x) g)) 
@@ -282,7 +282,34 @@ convertNValue (d, g) = go
     go (N_Tuple es) = C.Tuple (map go es)
 
 
---convertNExp :: (TVarMap t, VarMap t e) -> N_Exp -> C.Expr t e
---convertNExp (d, g) = go
---  where
---    go 
+extractNValue :: Annotated_V -> N_Value
+extractNValue (Annotated_V e e_tp) = e
+
+convertNExp :: (TVarMap t, VarMap t e) -> N_Exp -> C.Expr t e
+convertNExp (d, g) = go
+  where
+    go (N_Let declare exp) = case declare of
+                                  (Declare_V name av) -> let exp1 = (convertNValue (d,g) (extractNValue av))
+                                                         in C.Let name exp1 (\x -> convertNExp (d, Map.insert name (C.Var name x) g) exp)
+                                  (Declare_O name av1 op av2) -> let exp1 = (convertNValue (d,g) (extractNValue av1))
+                                                                     exp2 = (convertNValue (d,g) (extractNValue av2))
+                                                                     exp_pass = C.PrimOp exp1 op exp2 
+                                                                  in C.Let name exp_pass (\x -> convertNExp (d, Map.insert name (C.Var name x) g) exp)
+                                  (Declare_T name index av) -> let exp1 = (convertNValue (d,g) (extractNValue av))
+                                                                   exp_pass = C.Proj index exp1
+                                                               in C.Let name exp_pass (\x -> convertNExp (d, Map.insert name (C.Var name x) g) exp)
+
+    go (N_If av e1 e2) = let exp1 = (convertNValue (d,g) (extractNValue av))
+                          in C.If exp1 (go e1) (go e2) 
+    go (N_App av tps avs) = let app_left = (convertNValue (d,g) (extractNValue av))
+                            in 
+                                if (length tps) == 0 then subCvrtApp app_left avs else subCvrtTApp app_left tps
+                                    where subCvrtApp app_left avs = case avs of 
+                                                                        [] ->  app_left
+                                                                        (y:ys) -> let tmp = (convertNValue (d,g) (extractNValue y))
+                                                                                  in subCvrtApp (C.App app_left tmp) ys
+                                          subCvrtTApp app_left tps = case tps of 
+                                                                          [] -> subCvrtApp app_left avs
+                                                                          (y:ys) -> let tmp = convertType d y
+                                                                                    in subCvrtTApp (C.TApp app_left tmp) ys 
+    go (N_Halt av) = (convertNValue (d,g) (extractNValue av))

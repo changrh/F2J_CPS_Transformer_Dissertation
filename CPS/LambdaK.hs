@@ -17,7 +17,7 @@ module CPS.LambdaK where
 import           CPS.LamSrc
 import           Data.Maybe (fromJust)
 import qualified Language.Java.Syntax as J (Op(..))
-
+import qualified Src as S
 
 
 -- CPSK Types.
@@ -30,11 +30,11 @@ data N_Type = N_TVar Name
             | N_Unit
             | N_JClass Name
   deriving (Eq, Show, Read)
-  
+
 type TypeArgs = String
 
 data N_Value = N_Var Name
-             | N_Lit Lit
+             | N_Lit S.Lit
              | N_Fix String [TypeArgs] [(Paramter, N_Type)] N_Exp
            ----Fix x [a] (X1:T1,.....Xn:Tn). e
            ----TypePara is a type argument used in N_Type in the binder
@@ -47,7 +47,7 @@ data Declaration = Declare_V String  Annotated_V
             ------- x = v  here x is a N_Var
                  | Declare_T String Int Annotated_V
             ------- x = Proj Int Tuple [N_Value]
-                 | Declare_O String Annotated_V Operator Annotated_V
+                 | Declare_O String Annotated_V S.Operator Annotated_V
             ------- x = v1 Op v2
   deriving (Eq, Show)
 data N_Exp = N_Let Declaration N_Exp
@@ -87,9 +87,9 @@ evaluate (N_If av e1 e2) env tenv =
           Nothing -> error "Lookup Error2!"
           Just av -> eval_bool av
 
-      eval_bool (Annotated_V (N_Lit (Bool bv)) bt) = Just bv
+      eval_bool (Annotated_V (N_Lit (S.Bool bv)) bt) = Just bv
 
-      eval_bool (Annotated_V (N_Lit (Int i)) it) = 
+      eval_bool (Annotated_V (N_Lit (S.Int i)) it) = 
         if i == 0 then Just True else Just False
 
       eval_bool _ = Nothing
@@ -140,17 +140,17 @@ eval_value (N_Var x) env =
 eval_value (N_Lit v) env = N_Lit v
 eval_value _ _ = error "Unknow value"
 
-eval_op :: Operator -> N_Value -> N_Value -> Maybe Annotated_V
-eval_op (Arith J.Add) (N_Lit (Int a)) (N_Lit (Int b)) = Just (Annotated_V (N_Lit (Int (a + b))) (N_JClass "Int"))
-eval_op (Arith J.Sub) (N_Lit (Int a)) (N_Lit (Int b)) = Just (Annotated_V (N_Lit (Int (a - b))) (N_JClass "Int")) 
-eval_op (Arith J.Mult) (N_Lit (Int a)) (N_Lit (Int b)) = Just (Annotated_V (N_Lit (Int (a * b))) (N_JClass "Int")) 
+eval_op :: S.Operator -> N_Value -> N_Value -> Maybe Annotated_V
+eval_op (S.Arith J.Add) (N_Lit (S.Int a)) (N_Lit (S.Int b)) = Just (Annotated_V (N_Lit (S.Int (a + b))) (N_JClass "Int"))
+eval_op (S.Arith J.Sub) (N_Lit (S.Int a)) (N_Lit (S.Int b)) = Just (Annotated_V (N_Lit (S.Int (a - b))) (N_JClass "Int")) 
+eval_op (S.Arith J.Mult) (N_Lit (S.Int a)) (N_Lit (S.Int b)) = Just (Annotated_V (N_Lit (S.Int (a * b))) (N_JClass "Int")) 
 --eval_op (Arith J.Div) (N_Lit (Int a)) (N_Lit (Int b)) = Just (Annotated_V (N_Lit (Int (a 'div' b))) (N_JClass "Integer")) 
 --eval_op (Arith J.Rem) (N_Lit (Int a)) (N_Lit (Int b)) = Just (Annotated_V (N_Lit (Int (a % b))) (N_JClass "Integer"))  
-eval_op (Compare J.GThan) (N_Lit (Int a)) (N_Lit (Int b)) = Just (Annotated_V (N_Lit (Bool (a > b))) (N_JClass "Bool"))  
-eval_op (Compare J.GThanE) (N_Lit (Int a)) (N_Lit (Int b)) = Just (Annotated_V (N_Lit (Bool (a >= b))) (N_JClass "Bool")) 
-eval_op (Compare J.LThan) (N_Lit (Int a)) (N_Lit (Int b)) = Just (Annotated_V (N_Lit (Bool (a < b))) (N_JClass "Bool")) 
-eval_op (Compare J.LThanE) (N_Lit (Int a)) (N_Lit (Int b)) = Just (Annotated_V (N_Lit (Bool (a <= b))) (N_JClass "Bool")) 
-eval_op (Compare J.Equal) (N_Lit (Int a)) (N_Lit (Int b)) = Just (Annotated_V (N_Lit (Bool (a == b))) (N_JClass "Bool"))     
+eval_op (S.Compare J.GThan) (N_Lit (S.Int a)) (N_Lit (S.Int b)) = Just (Annotated_V (N_Lit (S.Bool (a > b))) (N_JClass "Bool"))  
+eval_op (S.Compare J.GThanE) (N_Lit (S.Int a)) (N_Lit (S.Int b)) = Just (Annotated_V (N_Lit (S.Bool (a >= b))) (N_JClass "Bool")) 
+eval_op (S.Compare J.LThan) (N_Lit (S.Int a)) (N_Lit (S.Int b)) = Just (Annotated_V (N_Lit (S.Bool (a < b))) (N_JClass "Bool")) 
+eval_op (S.Compare J.LThanE) (N_Lit (S.Int a)) (N_Lit (S.Int b)) = Just (Annotated_V (N_Lit (S.Bool (a <= b))) (N_JClass "Bool")) 
+eval_op (S.Compare J.Equal) (N_Lit (S.Int a)) (N_Lit (S.Int b)) = Just (Annotated_V (N_Lit (S.Bool (a == b))) (N_JClass "Bool"))     
 
 
 

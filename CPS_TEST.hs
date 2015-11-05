@@ -21,36 +21,37 @@ import           CPS.LamSrc
 import           CPS.LambdaF
 import           CPS.LambdaK
 import           CPS.Transformer
+import qualified Src as S
 
 ----------------------------------------Evaluator Test--------------------------------------------------
 
 u = let e1 = Annotated_V (N_Var "x") (N_TVar "A") 
         e2 = Annotated_V (N_Var "y") (N_TVar "A") 
-     in  N_Fix "f" ["A"] [("x", (N_TVar "A")),("y", (N_TVar "A"))] (N_Let (Declare_O "Z" e1 (Arith J.Add) e2) (N_App (Annotated_V (N_Fix "" [] [("k", (N_JClass "Integer"))] (N_Halt (Annotated_V (N_Var "k") (N_JClass "Integer")))) (N_Forall [] [(N_JClass "Integer")] N_Void)) [] [(Annotated_V (N_Var "Z") (N_JClass "Integer"))] ))
+     in  N_Fix "f" ["A"] [("x", (N_TVar "A")),("y", (N_TVar "A"))] (N_Let (Declare_O "Z" e1 (S.Arith J.Add) e2) (N_App (Annotated_V (N_Fix "" [] [("k", (N_JClass "Int"))] (N_Halt (Annotated_V (N_Var "k") (N_JClass "Int")))) (N_Forall [] [(N_JClass "Int")] N_Void)) [] [(Annotated_V (N_Var "Z") (N_JClass "Int"))] ))
 
-p = N_App (Annotated_V u (N_Forall ["A"] [(N_TVar "A"),(N_TVar "A")] N_Void)) [(N_JClass "Integer")] [(Annotated_V (N_Lit (Int 2)) (N_JClass "Integer")), (Annotated_V (N_Lit (Int 3)) (N_JClass "Integer"))]   
+p = N_App (Annotated_V u (N_Forall ["A"] [(N_TVar "A"),(N_TVar "A")] N_Void)) [(N_JClass "Int")] [(Annotated_V (N_Lit (S.Int 2)) (N_JClass "Int")), (Annotated_V (N_Lit (S.Int 3)) (N_JClass "Int"))]   
 
 u1 = let e1 = Annotated_V (N_Var "x") (N_TVar "A") 
          e2 = Annotated_V (N_Var "y") (N_TVar "A") 
-     in  N_Fix "f" ["A"] [("x", (N_TVar "A")),("y", (N_TVar "A"))] (N_Let (Declare_O "Z" e1 (Compare J.GThan) e2) (N_App (Annotated_V (N_Fix "" [] [("k", (N_JClass "Integer"))] (N_Halt (Annotated_V (N_Var "k") (N_JClass "Integer")))) (N_Forall [] [(N_JClass "Integer")] N_Void)) [] [(Annotated_V (N_Var "Z") (N_JClass "Integer"))] ))
+     in  N_Fix "f" ["A"] [("x", (N_TVar "A")),("y", (N_TVar "A"))] (N_Let (Declare_O "Z" e1 (S.Compare J.GThan) e2) (N_App (Annotated_V (N_Fix "" [] [("k", (N_JClass "Int"))] (N_Halt (Annotated_V (N_Var "k") (N_JClass "Int")))) (N_Forall [] [(N_JClass "Int")] N_Void)) [] [(Annotated_V (N_Var "Z") (N_JClass "Int"))] ))
 
-p1 = N_App (Annotated_V u1 (N_Forall ["A"] [(N_TVar "A"),(N_TVar "A")] N_Void)) [(N_JClass "Integer")] [(Annotated_V (N_Lit (Int 2)) (N_JClass "Integer")), (Annotated_V (N_Lit (Int 3)) (N_JClass "Integer"))]   
+p1 = N_App (Annotated_V u1 (N_Forall ["A"] [(N_TVar "A"),(N_TVar "A")] N_Void)) [(N_JClass "Int")] [(Annotated_V (N_Lit (S.Int 2)) (N_JClass "Int")), (Annotated_V (N_Lit (S.Int 3)) (N_JClass "Int"))]   
 
 u2 = let e1 = Annotated_V (N_Var "x") (N_TVar "A") 
          e2 = Annotated_V (N_Var "y") (N_TVar "A") 
      in  N_Fix 
           "f" 
           ["A"] 
-          [("x", (N_TVar "A")),("y", (N_TVar "A")), ("k", (N_Forall [] [(N_JClass "Integer")] N_Void))] 
+          [("x", (N_TVar "A")),("y", (N_TVar "A")), ("k", (N_Forall [] [(N_JClass "Int")] N_Void))] 
           (N_Let 
-            (Declare_O "z" e1 (Arith J.Add) e2) 
+            (Declare_O "z" e1 (S.Arith J.Add) e2) 
             (N_App 
               (Annotated_V 
                 (N_Var "k")
-                (N_Forall [] [(N_JClass "Integer")] N_Void)
+                (N_Forall [] [(N_JClass "Int")] N_Void)
               ) 
               [] 
-              [(Annotated_V (N_Var "Z") (N_JClass "Integer"))] 
+              [(Annotated_V (N_Var "Z") (N_JClass "Int"))] 
             )
           )
 p2 = N_App 
@@ -58,58 +59,58 @@ p2 = N_App
         u 
         (N_Forall ["A"] [(N_TVar "A"),(N_TVar "A")] N_Void)
       ) 
-      [(N_JClass "Integer")] 
-      [(Annotated_V (N_Lit (Int 2)) (N_JClass "Integer")), 
-       (Annotated_V (N_Lit (Int 3)) (N_JClass "Integer")),
+      [(N_JClass "Int")] 
+      [(Annotated_V (N_Lit (S.Int 2)) (N_JClass "Int")), 
+       (Annotated_V (N_Lit (S.Int 3)) (N_JClass "Int")),
        (Annotated_V 
           (N_Fix 
             "" 
             [] 
-            [("k", (N_JClass "Integer"))] 
-            (N_Halt (Annotated_V (N_Var "k") (N_JClass "Integer")))
+            [("k", (N_JClass "Int"))] 
+            (N_Halt (Annotated_V (N_Var "k") (N_JClass "Int")))
           ) 
-          (N_Forall [] [(N_JClass "Integer")] N_Void)
+          (N_Forall [] [(N_JClass "Int")] N_Void)
         )
       ]   
 
 fact = N_Fix 
         "f"
         []
-        [("n", (N_JClass "Integer")), ("k", (N_Forall [] [(N_JClass "Integer")] N_Void))]
+        [("n", (N_JClass "Int")), ("k", (N_Forall [] [(N_JClass "Int")] N_Void))]
         (N_If
-          (Annotated_V (N_Var "n") (N_JClass "Integer"))
+          (Annotated_V (N_Var "n") (N_JClass "Int"))
           (N_App
             (Annotated_V 
                 (N_Var "k")
-                (N_Forall [] [(N_JClass "Integer")] N_Void)
+                (N_Forall [] [(N_JClass "Int")] N_Void)
               ) 
             []
-            [(Annotated_V (N_Lit (Int 1)) (N_JClass "Integer"))]
+            [(Annotated_V (N_Lit (S.Int 1)) (N_JClass "Int"))]
           )
           (N_Let 
-            (Declare_O "x" (Annotated_V (N_Var "n") (N_JClass "Integer")) (Arith J.Sub) (Annotated_V (N_Lit (Int 1)) (N_JClass "Integer")))
+            (Declare_O "x" (Annotated_V (N_Var "n") (N_JClass "Int")) (S.Arith J.Sub) (Annotated_V (N_Lit (S.Int 1)) (N_JClass "Int")))
             (N_App
-              (Annotated_V (N_Var "f") (N_Forall [] [(N_JClass "Integer")] N_Void))
+              (Annotated_V (N_Var "f") (N_Forall [] [(N_JClass "Int")] N_Void))
               []
-              [(Annotated_V (N_Var "x") (N_JClass "Integer")), 
+              [(Annotated_V (N_Var "x") (N_JClass "Int")), 
                (Annotated_V
                   (N_Fix 
                     "lam" 
                     [] 
-                    [("y", (N_JClass "Integer"))]  
+                    [("y", (N_JClass "Int"))]  
                     (N_Let
-                      (Declare_O "z" (Annotated_V (N_Var "n") (N_JClass "Integer")) (Arith J.Mult) (Annotated_V (N_Var "y") (N_JClass "Integer")))
+                      (Declare_O "z" (Annotated_V (N_Var "n") (N_JClass "Int")) (S.Arith J.Mult) (Annotated_V (N_Var "y") (N_JClass "Int")))
                       (N_App
                         (Annotated_V 
                           (N_Var "k")
-                          (N_Forall [] [(N_JClass "Integer")] N_Void)
+                          (N_Forall [] [(N_JClass "Int")] N_Void)
                         )  
                         []
-                        [(Annotated_V (N_Var "z") (N_JClass "Integer"))]
+                        [(Annotated_V (N_Var "z") (N_JClass "Int"))]
                       )
                     )
                   )
-                  (N_Forall [] [(N_JClass "Integer")] N_Void)
+                  (N_Forall [] [(N_JClass "Int")] N_Void)
                 )
               ]
             )
@@ -119,63 +120,63 @@ fact = N_Fix
 fp = N_App
       (Annotated_V
         fact 
-        (N_Forall [] [(N_JClass "Integer")] N_Void)
+        (N_Forall [] [(N_JClass "Int")] N_Void)
       )
       []
-      [ (Annotated_V (N_Lit (Int 20)) (N_JClass "Integer")), 
+      [ (Annotated_V (N_Lit (S.Int 20)) (N_JClass "Int")), 
         (Annotated_V 
           (N_Fix 
             "" 
             [] 
-            [("n", (N_JClass "Integer"))] 
-            (N_Halt (Annotated_V (N_Var "n") (N_JClass "Integer")))
+            [("n", (N_JClass "Int"))] 
+            (N_Halt (Annotated_V (N_Var "n") (N_JClass "Int")))
           ) 
-          (N_Forall [] [(N_JClass "Integer")] N_Void)
+          (N_Forall [] [(N_JClass "Int")] N_Void)
         )
       ]
 
 red = N_Fix 
         "f"
         []
-        [("n", (N_JClass "Integer")), ("k", (N_Forall [] [(N_JClass "Integer")] N_Void))]
+        [("n", (N_JClass "Int")), ("k", (N_Forall [] [(N_JClass "Int")] N_Void))]
         (N_If 
-          (Annotated_V (N_Var "n") (N_JClass "Integer"))
+          (Annotated_V (N_Var "n") (N_JClass "Int"))
           (N_App
             (Annotated_V 
                 (N_Var "k")
-                (N_Forall [] [(N_JClass "Integer")] N_Void)
+                (N_Forall [] [(N_JClass "Int")] N_Void)
             ) 
             []
-            [(Annotated_V (N_Lit (Int 0)) (N_JClass "Integer"))]
+            [(Annotated_V (N_Lit (S.Int 0)) (N_JClass "Int"))]
           )
           (N_Let 
-            (Declare_O "z" (Annotated_V (N_Var "n") (N_JClass "Integer")) (Arith J.Sub) (Annotated_V (N_Lit (Int 1)) (N_JClass "Integer")))
+            (Declare_O "z" (Annotated_V (N_Var "n") (N_JClass "Int")) (S.Arith J.Sub) (Annotated_V (N_Lit (S.Int 1)) (N_JClass "Int")))
             (N_App
               (Annotated_V 
                   (N_Var "f")
-                  (N_Forall [] [(N_JClass "Integer")] N_Void)
+                  (N_Forall [] [(N_JClass "Int")] N_Void)
               ) 
               []
               [
-                (Annotated_V (N_Var "z") (N_JClass "Integer")), 
-                (Annotated_V (N_Var "k") (N_Forall [] [(N_JClass "Integer")] N_Void))
+                (Annotated_V (N_Var "z") (N_JClass "Int")), 
+                (Annotated_V (N_Var "k") (N_Forall [] [(N_JClass "Int")] N_Void))
               ]
             )
           )
         )
 
 prog = N_App
-        (Annotated_V red (N_Forall [] [(N_JClass "Integer")] N_Void))
+        (Annotated_V red (N_Forall [] [(N_JClass "Int")] N_Void))
         []
-        [(Annotated_V (N_Lit (Int 6)) (N_JClass "Integer")), 
+        [(Annotated_V (N_Lit (S.Int 6)) (N_JClass "Int")), 
          (Annotated_V 
             (N_Fix 
               "" 
               [] 
-              [("k", (N_JClass "Integer"))] 
-              (N_Halt (Annotated_V (N_Var "k") (N_JClass "Integer")))
+              [("k", (N_JClass "Int"))] 
+              (N_Halt (Annotated_V (N_Var "k") (N_JClass "Int")))
             ) 
-            (N_Forall [] [(N_JClass "Integer")] N_Void)
+            (N_Forall [] [(N_JClass "Int")] N_Void)
           )
         ]
 
@@ -235,13 +236,13 @@ prog = N_App
 --        in (runCPS $ cpsTransProg (Annotated_F  prog prog_tp))
 -----------------------------TEST CASE 5 -----------------------------------------------------
 main = let prog = (Fix "factorial" ("n", JClass "Int") 
-                        (If (PrimOp (Var "n") (Compare J.Equal) (Lit (Int 0)) )
-                            (Lit (Int 1))
-                            (PrimOp (Var "n") (Arith J.Mult) (App (Var "factorial") (PrimOp (Var "n") (Arith J.Sub) (Lit (Int 1))) ) ) 
+                        (If (PrimOp (Var "n") (S.Compare J.Equal) (Lit (S.Int 0)) )
+                            (Lit (S.Int 1))
+                            (PrimOp (Var "n") (S.Arith J.Mult) (App (Var "factorial") (PrimOp (Var "n") (S.Arith J.Sub) (Lit (S.Int 1))) ) ) 
                         ) 
                         (JClass "Int")
                   )
-           runProg = App prog (Lit (Int 10))
+           runProg = App prog (Lit (S.Int 10))
            prog_tp = fromJust (tCheck runProg [(" ", Unit)])
         --in evaluate (runCPS $ cpsTransProg (Annotated_F  runProg prog_tp) ) [(" ", Annotated_V (N_Lit (Int 9999)) (N_JClass "Int") )] [(" ", N_Unit)]
         --in fromJust (tCheck prog [(" ", Unit)])

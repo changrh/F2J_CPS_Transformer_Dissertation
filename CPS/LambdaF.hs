@@ -17,6 +17,7 @@ module CPS.LambdaF where
 import           CPS.LamSrc
 import           Data.Maybe (fromJust)
 import qualified Language.Java.Syntax as J (Op(..))
+import qualified Src as S
 
 data Annotated_F = Annotated_F Exp Type
 
@@ -31,12 +32,12 @@ data Type
 
 data Exp
   = Var String
-  | Lit Lit
+  | Lit S.Lit
   | Lam (String, Type) Exp
   | App Exp Exp
   | BLam String Exp
   | TApp Exp Type
-  | PrimOp Exp Operator Exp
+  | PrimOp Exp S.Operator Exp
   | If Exp Exp Exp
   | Proj Int Exp
   | Tuple [Exp]
@@ -59,10 +60,10 @@ substitute (TupleType (x:xs)) (n, t) = TupleType ((substitute x (n ,t)):(subList
 substitute (JClass x) (n, t) = if x == n then t else JClass x
 substitute (Unit) (n, t) = Unit   
 
-tbinary :: Operator -> Type -> Type -> Maybe Type
-tbinary (Arith _) (JClass t1) (JClass t2)  =  Just (JClass t1)
-tbinary (Compare _) (JClass t1)  (JClass t2) = Just (JClass "Bool")
-tbinary (Logic _) (JClass "Bool")  (JClass "Bool")   = Just (JClass "Bool")
+tbinary :: S.Operator -> Type -> Type -> Maybe Type
+tbinary (S.Arith _) (JClass t1) (JClass t2)  =  Just (JClass t1)
+tbinary (S.Compare _) (JClass t1)  (JClass t2) = Just (JClass "Bool")
+tbinary (S.Logic _) (JClass "Bool")  (JClass "Bool")   = Just (JClass "Bool")
 tbinary _ _ _ = error "tbinary Error Occurs!"
 
 tCheck :: Exp -> TEnv -> Maybe Type
@@ -70,11 +71,11 @@ tCheck (Var n) tenv             = lookup n tenv
 
 tCheck (Lit n) tenv             = 
   case n of 
-    UnitLit -> Just Unit
-    Char t -> Just (JClass "Char")
-    Int t -> Just (JClass "Int")
-    String t -> Just (JClass "String")
-    Bool t -> Just (JClass "Bool")
+    S.UnitLit -> Just Unit
+    S.Char t -> Just (JClass "Char")
+    S.Int t -> Just (JClass "Int")
+    S.String t -> Just (JClass "String")
+    S.Bool t -> Just (JClass "Bool")
     _ -> error "Lit Error Occurs!"
 tCheck (App e1 e2) tenv           = 
   case (tCheck e1 tenv, tCheck e2 tenv) of
