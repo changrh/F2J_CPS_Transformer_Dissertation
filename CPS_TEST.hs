@@ -240,17 +240,17 @@ prog = N_App
 --        in (runCPS $ cpsTransProg (Annotated_F  prog prog_tp))
 -----------------------------TEST CASE 5 -----------------------------------------------------
 main = let prog = (Fix "factorial" ("n", JClass "Int") 
-                        (If (PrimOp (Var "n") (S.Compare J.Equal) (Lit (S.Int 0)) )
+                        (If (PrimOp (Var "n") (S.Compare J.Equal) (Lit (S.Int 1)) )
                             (Lit (S.Int 1))
                             (PrimOp (Var "n") (S.Arith J.Mult) (App (Var "factorial") (PrimOp (Var "n") (S.Arith J.Sub) (Lit (S.Int 1))) ) ) 
                         ) 
                         (JClass "Int")
                   )
-           runProg = App prog (Lit (S.Int 10))
+           runProg = App prog (Lit (S.Int 100))
            prog_tp = fromJust (tCheck runProg [(" ", Unit)])
---        in evaluate (runCPS $ cpsTransProg (Annotated_F  runProg prog_tp) ) [(" ", Annotated_V (N_Lit (S.Int 9999)) (N_JClass "Int") )] [(" ", N_Unit)]
+        in evaluate (runCPS $ cpsTransProg (Annotated_F  runProg prog_tp) ) [(" ", Annotated_V (N_Lit (S.Int 9999)) (N_JClass "Int") )]
         --in fromJust (tCheck prog [(" ", Unit)])
-        in C.prettyExpr $ convertNExp (Map.empty, Map.empty) (runCPS $ cpsTransProg (Annotated_F  runProg prog_tp) )
+        --in C.prettyExpr $ convertNExp (Map.empty, Map.empty) (runCPS $ cpsTransProg (Annotated_F  runProg prog_tp) )
         --in (runCPS $ cpsTransProg (Annotated_F  runProg prog_tp) )
 -----------------------------TEST CASE 6 -----------------------------------------------------
 --main = let prog = (If (Lit (Int 1)) (Lit (Int 2)) (Lit (Int 3)))
@@ -296,15 +296,17 @@ main = let prog = (Fix "factorial" ("n", JClass "Int")
 -----------------------------TEST CASE 11 -----------------------------------------------------
 --f 1 = 1 , f n = f (n-1) 
 --main = let prog = (Fix "recursive" ("n", JClass "Int") 
---                        (If (PrimOp (Var "n") (Compare J.Equal) (Lit (Int 1)) ) 
---                            (Lit (Int 1))
---                            (App (Var "recursive") (PrimOp (Var "n") (Arith J.Sub) (Lit (Int 1))) )
+--                        (If (PrimOp (Var "n") (S.Compare J.Equal) (Lit (S.Int 1)) ) 
+--                            (Lit (S.Int 1))
+--                            (App (Var "recursive") (PrimOp (Var "n") (S.Arith J.Sub) (Lit (S.Int 1))) )
 --                        ) 
 --                        (JClass "Int")
 --                  )
---           runProg = App prog (Lit (Int 6))
+--           runProg = App prog (Lit (S.Int 100))
 --           prog_tp = fromJust (tCheck runProg [(" ", Unit)])
---        in evaluate (runCPS $ cpsTransProg (Annotated_F runProg prog_tp) ) [(" ", Annotated_V (N_Lit (Int 0)) (N_JClass "Int") )] [(" ", N_Unit)]
+--           cpsed_prog = (runCPS $ cpsTransProg (Annotated_F runProg prog_tp) ) 
+--        in C.prettyExpr $ convertNExp (Map.empty, Map.empty) (runCPS $ cpsTransProg (Annotated_F  runProg prog_tp) )
+        --in evaluate cpsed_prog [(" ", Annotated_V (N_Lit (S.Int 9999)) (N_JClass "Int") )]
         --in print prog
         --in (runCPS $ cpsTransProg (Annotated_F runProg prog_tp) )
         --in fromJust (tCheck runProg [(" ", Unit)])
@@ -332,7 +334,7 @@ main = let prog = (Fix "factorial" ("n", JClass "Int")
 --                          (N_Let 
 --                            (Declare_O "x" (Annotated_V (N_Var "n") (N_JClass "Int")) (S.Arith J.Sub) (Annotated_V (N_Lit (S.Int 1)) (N_JClass "Int")))
 --                            (N_App
---                              (Annotated_V (N_Var "f") (N_Forall [] [(N_JClass "Int")] N_Void))
+--                              (Annotated_V (N_Var "f") (N_Forall [] [(N_JClass "Int"), (N_Forall [] [(N_JClass "Int")] N_Void)] N_Void))
 --                              []
 --                              [(Annotated_V (N_Var "x") (N_JClass "Int")), 
 --                               (Annotated_V
@@ -378,7 +380,7 @@ main = let prog = (Fix "factorial" ("n", JClass "Int")
 --                        )
 --                      ]
 --                     )
---           in evaluate fp [(" ", Annotated_V (N_Lit (S.Int 9999)) (N_JClass "Int") )] [(" ", N_Unit)]
+--           in evaluate fp [(" ", Annotated_V (N_Lit (S.Int 9999)) (N_JClass "Int") )]
 -----------------------------TEST CASE 14 -----------------------------------------------------
 
 --main = let prog = N_App 
