@@ -17,23 +17,20 @@ module CPS_TEST where
 
 import           Data.Maybe
 import qualified Language.Java.Syntax as J (Op(..))
-import           CPS.LamSrc
 import           CPS.LambdaF
 import           CPS.LambdaK
 import           CPS.Transformer
 import qualified Src as S
-import qualified Data.Map as Map
-import qualified Core as C
 import Text.Printf
-import qualified Control.Exception  as Contrl
 import System.CPUTime
- 
+
+
 time :: IO t -> IO t
 time a = do
     start <- getCPUTime
     v <- a
     end   <- getCPUTime
-    let diff = (fromIntegral (end - start)) / (10^12)
+    let diff = (fromIntegral (end - start)) / (10 ** 12)
     printf "Computation time: %0.3f sec\n" (diff :: Double)
     return v
 
@@ -250,13 +247,13 @@ prog = N_App
 --        in (runCPS $ cpsTransProg (Annotated_F  prog prog_tp))
 -----------------------------TEST CASE 5 -----------------------------------------------------
 main = let prog = (Fix "factorial" ("n", JClass "Int") 
-                        (If (PrimOp (Var "n") (S.Compare J.Equal) (Lit (S.Int 1)) )
+                        (If (Var "n")
                             (Lit (S.Int 1))
                             (PrimOp (Var "n") (S.Arith J.Mult) (App (Var "factorial") (PrimOp (Var "n") (S.Arith J.Sub) (Lit (S.Int 1))) ) ) 
                         ) 
                         (JClass "Int")
                   )
-           runProg = App prog (Lit (S.Int 300))
+           runProg = App prog (Lit (S.Int 1000))
            prog_tp = fromJust (tCheck runProg [(" ", Unit)])
         --in evaluate (runCPS $ cpsTransProg (Annotated_F  runProg prog_tp) ) [(" ", Annotated_V (N_Lit (S.Int 9999)) (N_JClass "Int") )]
         --in fromJust (tCheck prog [(" ", Unit)])

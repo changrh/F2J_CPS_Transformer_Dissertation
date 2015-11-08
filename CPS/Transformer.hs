@@ -16,15 +16,12 @@ more information, please refer to the paper on wiki.
 module CPS.Transformer where
 
 import           Data.Maybe (fromJust)
-import qualified Language.Java.Syntax as J (Op(..))
 import Control.Monad.State
 import qualified Core as C
 import qualified Data.Map as Map
 import           Data.Maybe (fromMaybe)
 import           CPS.LambdaF
 import           CPS.LambdaK
-import           CPS.LamSrc
-import Debug.Trace
 
 ------------------------------CPS Transformation from SystemF to CPSK----------------------------------
 
@@ -38,15 +35,16 @@ type CPS_State a = State Environment a
 
 cpsTransType :: Type -> N_Type
 cpsTransType (TVar name)           = N_TVar name
-
 cpsTransType (JClass name)         = N_JClass name
 cpsTransType  Unit                 = N_Unit
 cpsTransType (Fun t1 t2)           = N_Forall [] [cpsTransType(t1), cpsTransCont(t2)] N_Void 
 cpsTransType (Forall name tp)      = N_Forall [name] [(cpsTransCont tp)] N_Void
-cpsTransType (TupleType (x:xs))    = N_TupleType (cpsTransType(x) : subList xs)
-                                    where subList xs = case xs of 
-                                                        [] -> []
-                                                        (y:ys) -> (cpsTransType y) : (subList ys)
+cpsTransType (TupleType (x:xs))    = N_TupleType ((cpsTransType x) : subList xs)
+                                        where subList xs = case xs of 
+                                                                [] -> []
+                                                                (y:ys) -> (cpsTransType y) : (subList ys)
+cpsTransType (TupleType [])        = error ("TupleType is empty !!!")
+
 
 cpsTransCont :: Type -> N_Type
 cpsTransCont tp = N_Forall [] [(cpsTransType tp)] N_Void
@@ -68,6 +66,7 @@ cpsTransExp (Annotated_F (BLam name e) tp) cont                = case tp of
                                                                                           let exp = (N_Fix functionName [name] [(varName, c_tp)] cps_e)
                                                                                           return ( N_App cont [] [(Annotated_V exp exp_tp)] ) 
                                                                                   )
+                                                                    others -> error ("The Type of BLam should be Forall !! Please Check -->" ++ show tp)
 
 cpsTransExp (Annotated_F (App e1 e2) tp) cont                  =  case (isSerious e1, isSerious e2) of 
                                                                         (True, True) -> do 
@@ -297,6 +296,7 @@ cpsTransExp (Annotated_F (PrimOp e1 op e2) tp) cont             = do
                                                                                                                 --let lam_x1 = trace ("cps_rest: " ++ show cps_rest) $ N_Fix functionName_1 [] [(varName_1, cpsTransType e1_tp)] cps_rest
                                                                                                                 let lam_x1 =  N_Fix functionName_1 [] [(varName_1, cpsTransType e1_tp)] cps_rest
                                                                                                                 cpsTransExp (Annotated_F e1 e1_tp) (Annotated_V lam_x1 lam_x1_cont)
+                                                                        (_, _) -> error ("Current Operation in PrimOP is not supported !!! ----> " ++ show op)
 cpsTransExp (Annotated_F (If e1 e2 e3) tp) cont                   = do
                                                                       tenv <- gets tCheckEnv
                                                                       varID <- gets varNameID
@@ -314,6 +314,9 @@ cpsTransExp (Annotated_F (If e1 e2 e3) tp) cont                   = do
                                                                       let lam_x = N_Fix functionName [] [(varName, x_tp)] (N_If (Annotated_V (N_Var varName) x_tp) (cps_rest_1) (cps_rest_2) ) 
                                                                           lam_x_tp = cpsTransCont e1_tp
                                                                       cpsTransExp (Annotated_F e1 e1_tp) (Annotated_V lam_x lam_x_tp)
+
+
+cpsTransExp (Annotated_F v v_tp) cont = error ("The expression should not be CPSed, Please Check ----> " ++ show v)
 
 
 isSerious :: Exp -> Bool
@@ -338,8 +341,9 @@ cpsTransTrivial (Annotated_F (Fix name (n, n_tp) e tp) tp_fix) = do
                                                                      let e_tp = fromJust (tCheck e new_tenv)
                                                                      cps_e <- (cpsTransExp (Annotated_F e e_tp) (Annotated_V (N_Var varName) c_tp))
                                                                      let fix_trans =   N_Fix name [] [(n, n_trans_tp),(varName, c_tp)] cps_e
-                                                                     return  (Annotated_V fix_trans fix_tp)
---cpsTransExp (Annotated_F (PrimOp e1 op e2) tp) =                                                           
+                                                                     return  (Annotated_V fix_trans fix_tp)    
+
+cpsTransTrivial (Annotated_F v v_tp) = error ("The expression should not be considered a trivial term !!! --->" ++ show v)                                                     
 
 cpsTransProg :: Annotated_F -> CPS_State N_Exp
 cpsTransProg (Annotated_F e e_tp) = do 
@@ -394,6 +398,8 @@ convertNValue (d, g) = go
                                                             [] -> subCvrtFix avs (d,g)
                                                             (y:ys) -> C.BLam y (\x -> subCvrtBLam ys (Map.insert y x d, g))
     go (Annotated_V (N_Tuple es) tp) = C.Tuple (map go es)
+    go (Annotated_V (N_Fix name tps [] exp) tp) = error ("Nothing in N_Fix parameters !!! ---> " ++ show name ) 
+
 
 convertNExp :: (TVarMap t, VarMap t e) -> N_Exp -> C.Expr t e
 convertNExp (d, g) = go

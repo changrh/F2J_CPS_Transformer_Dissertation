@@ -16,7 +16,6 @@ module CPS.LambdaF where
 
 import           CPS.LamSrc
 import           Data.Maybe (fromJust)
-import qualified Language.Java.Syntax as J (Op(..))
 import qualified Src as S
 
 data Annotated_F = Annotated_F Exp Type
@@ -52,11 +51,11 @@ substitute :: Type -> (String, Type) -> Type
 substitute (TVar x) (n, t) = if x == n then t else TVar x
 substitute (Forall n tp) (n1, t) = if n == n1 then substitute tp (n1, t) else (Forall n tp)
 substitute (Fun t1 t2) (n, t) = Fun (substitute t1 (n, t)) (substitute t2 (n, t))
---substitute (TupleType (x:xs)) (n, t) = TupleType ((substitute x (n ,t)):[(substitute (TupleType xs) (n, t))])
 substitute (TupleType (x:xs)) (n, t) = TupleType ((substitute x (n ,t)):(subList xs (n, t)))
   where subList list (n, t) = case list of
                                 [] -> []
                                 (y:ys) -> (substitute y (n ,t)):subList ys (n, t)
+substitute (TupleType []) (n, t) = error ("Nothing in TupleType, then it should not be substituted !!!") 
 substitute (JClass x) (n, t) = if x == n then t else JClass x
 substitute (Unit) (n, t) = Unit   
 
@@ -76,15 +75,16 @@ tCheck (Lit n) tenv             =
     S.Int t -> Just (JClass "Int")
     S.String t -> Just (JClass "String")
     S.Bool t -> Just (JClass "Bool")
-    _ -> error "Lit Error Occurs!"
+
+
 tCheck (App e1 e2) tenv           = 
   case (tCheck e1 tenv, tCheck e2 tenv) of
     (Just t1, Just t2) -> case t1 of 
                             Fun inType outType -> if inType == t2 then Just (outType) else Nothing
-                            _ -> error ("App Left is Not a Function Type! ----> App " ++ show e1 ++ "  " ++ show e2)
+                            others -> error ("App Left is Not a Function Type! ----> App " ++ show e1 ++ "  " ++ show e2)
     (Nothing, _) -> error "App Left Error Occurs!"
     (Just t1, Nothing) -> error "App Right Error Occurs!"
-    _ -> error "App Error Occurs!"
+
 
 tCheck (Lam (n, t) e) tenv      = 
   case tCheck e ((n,t) : tenv) of 
@@ -117,6 +117,8 @@ tCheck (If p e1 e2) tenv        =
     Just (JClass "Int") -> case tCheck e1 tenv of 
                               Nothing -> error "If Int Error Occurs!"
                               Just t1 -> if (Just t1 == (tCheck e2 tenv)) then (Just t1) else (error "Error occured Int")
+    others -> error ("Error occurs in tCheck If ---> " ++ show p)
+
 tCheck (Proj index e) tenv        = 
   case e of 
     Tuple xs -> tCheck (xs !! index) tenv
@@ -129,7 +131,7 @@ tCheck (Tuple (x:xs)) tenv      =  let out = TupleType (fromJust((tCheck x tenv)
                                                                 (y:ys) -> fromJust(tCheck y tenv) : (subList ys tenv) 
                                    in 
                                       Just out
-
+tCheck (Tuple []) tenv  = error ("Tuple is empty !!!")
 tCheck (Fix n1 (n2, t1) e t2) tenv  = case tCheck e ((n2, t1) : (n1, (Fun t1 t2)) : tenv) of
                                         Nothing -> error ("Fix Error Occurs!" ++ show ((n2, t1) : (n1, (Fun t1 t2)) : tenv))
                                         Just t -> if (t == t2) then Just (Fun t1 t2) else error "Fix Type Does Not Match !!"

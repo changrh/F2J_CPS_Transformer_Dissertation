@@ -2,10 +2,8 @@
 module CPS.LambdaK where
 
 import           CPS.LamSrc
-import           Data.Maybe (fromJust)
 import qualified Language.Java.Syntax as J (Op(..))
 import qualified Src as S
-import Debug.Trace
 
 
 -- CPSK Types.
@@ -93,7 +91,6 @@ eval_bool av = error ("Value " ++ show av ++ " is not a proper predicate")
 
 de_annotate :: Annotated_V -> N_Value
 de_annotate (Annotated_V v t) = v
-de_annotate av = error ("Unknown value" ++ show av)
 
 funcDeRef :: Annotated_V -> Env -> Annotated_V
 funcDeRef (Annotated_V (N_Var f) t) env                 = case lookup f env of
@@ -112,7 +109,7 @@ deReferenceAV (Annotated_V (N_Fix fn targs pts exp) t) env =
       Nothing -> Annotated_V (N_Fix fn targs pts (deReferenceExp exp env)) t
       Just av -> Annotated_V (N_Fix fn targs pts exp) t
 deReferenceAV (Annotated_V (N_Tuple avs) t) env            = Annotated_V (N_Tuple (map ((flip deReferenceAV) env) avs)) t
-deReferenceAV v _                                          = error ("Value " ++ show v ++ "cannot be de-referenced") 
+
 
 deReferenceExp :: N_Exp -> Env -> N_Exp
 deReferenceExp (N_Let dec exp) env    = N_Let (deReferenceDec dec env) (deReferenceExp exp env)
@@ -129,10 +126,11 @@ calculate :: S.Operator -> N_Value -> N_Value -> Annotated_V
 calculate (S.Arith J.Add) (N_Lit (S.Int a)) (N_Lit (S.Int b))      = Annotated_V (N_Lit (S.Int (a + b))) (N_JClass "Int")
 calculate (S.Arith J.Sub) (N_Lit (S.Int a)) (N_Lit (S.Int b))      = Annotated_V (N_Lit (S.Int (a - b))) (N_JClass "Int") 
 calculate (S.Arith J.Mult) (N_Lit (S.Int a)) (N_Lit (S.Int b))     = Annotated_V (N_Lit (S.Int (a * b))) (N_JClass "Int") 
---calculate (Arith J.Div) (N_Lit (Int a)) (N_Lit (Int b)) = Annotated_V (N_Lit (Int (a 'div' b))) (N_JClass "Integer") 
---calculate (Arith J.Rem) (N_Lit (Int a)) (N_Lit (Int b)) = Annotated_V (N_Lit (Int (a % b))) (N_JClass "Integer")
+calculate (S.Arith J.Div) (N_Lit (S.Int a)) (N_Lit (S.Int b))      = Annotated_V (N_Lit (S.Int (a `div` b))) (N_JClass "Int") 
+calculate (S.Arith J.Rem) (N_Lit (S.Int a)) (N_Lit (S.Int b))      = Annotated_V (N_Lit (S.Int (a `rem` b))) (N_JClass "Int")
 calculate (S.Compare J.GThan) (N_Lit (S.Int a)) (N_Lit (S.Int b))  = Annotated_V (N_Lit (S.Bool (a > b))) (N_JClass "Bool")  
 calculate (S.Compare J.GThanE) (N_Lit (S.Int a)) (N_Lit (S.Int b)) = Annotated_V (N_Lit (S.Bool (a >= b))) (N_JClass "Bool") 
 calculate (S.Compare J.LThan) (N_Lit (S.Int a)) (N_Lit (S.Int b))  = Annotated_V (N_Lit (S.Bool (a < b))) (N_JClass "Bool") 
 calculate (S.Compare J.LThanE) (N_Lit (S.Int a)) (N_Lit (S.Int b)) = Annotated_V (N_Lit (S.Bool (a <= b))) (N_JClass "Bool") 
 calculate (S.Compare J.Equal) (N_Lit (S.Int a)) (N_Lit (S.Int b))  = Annotated_V (N_Lit (S.Bool (a == b))) (N_JClass "Bool")     
+calculate others _ _ = error ("Operator Currently Not Defined ---> " ++ show others)
