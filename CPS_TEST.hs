@@ -24,8 +24,18 @@ import           CPS.Transformer
 import qualified Src as S
 import qualified Data.Map as Map
 import qualified Core as C
-
-
+import Text.Printf
+import qualified Control.Exception  as Contrl
+import System.CPUTime
+ 
+time :: IO t -> IO t
+time a = do
+    start <- getCPUTime
+    v <- a
+    end   <- getCPUTime
+    let diff = (fromIntegral (end - start)) / (10^12)
+    printf "Computation time: %0.3f sec\n" (diff :: Double)
+    return v
 
 ----------------------------------------Evaluator Test--------------------------------------------------
 
@@ -246,12 +256,18 @@ main = let prog = (Fix "factorial" ("n", JClass "Int")
                         ) 
                         (JClass "Int")
                   )
-           runProg = App prog (Lit (S.Int 100))
+           runProg = App prog (Lit (S.Int 300))
            prog_tp = fromJust (tCheck runProg [(" ", Unit)])
-        in evaluate (runCPS $ cpsTransProg (Annotated_F  runProg prog_tp) ) [(" ", Annotated_V (N_Lit (S.Int 9999)) (N_JClass "Int") )]
+        --in evaluate (runCPS $ cpsTransProg (Annotated_F  runProg prog_tp) ) [(" ", Annotated_V (N_Lit (S.Int 9999)) (N_JClass "Int") )]
         --in fromJust (tCheck prog [(" ", Unit)])
         --in C.prettyExpr $ convertNExp (Map.empty, Map.empty) (runCPS $ cpsTransProg (Annotated_F  runProg prog_tp) )
         --in (runCPS $ cpsTransProg (Annotated_F  runProg prog_tp) )
+        in do
+            putStrLn "Starting..."
+            let result = (evaluate (runCPS $ cpsTransProg (Annotated_F  runProg prog_tp) ) [(" ", Annotated_V (N_Lit (S.Int 9999)) (N_JClass "Int") )])
+            time $ result `seq` return ()
+            putStrLn "Done."
+            print result
 -----------------------------TEST CASE 6 -----------------------------------------------------
 --main = let prog = (If (Lit (Int 1)) (Lit (Int 2)) (Lit (Int 3)))
 --           prog_tp = fromJust (tCheck prog [(" ", Unit)])
@@ -368,7 +384,7 @@ main = let prog = (Fix "factorial" ("n", JClass "Int")
 --                        (N_Forall [] [(N_JClass "Int")] N_Void)
 --                      )
 --                      []
---                      [ (Annotated_V (N_Lit (S.Int 60)) (N_JClass "Int")), 
+--                      [ (Annotated_V (N_Lit (S.Int 1000)) (N_JClass "Int")), 
 --                        (Annotated_V 
 --                          (N_Fix 
 --                            "" 
@@ -380,7 +396,13 @@ main = let prog = (Fix "factorial" ("n", JClass "Int")
 --                        )
 --                      ]
 --                     )
---           in evaluate fp [(" ", Annotated_V (N_Lit (S.Int 9999)) (N_JClass "Int") )]
+--           in do
+--                putStrLn "Starting..."
+--                let result = (evaluate fp [(" ", Annotated_V (N_Lit (S.Int 9999)) (N_JClass "Int") )])
+--                time $ result `seq` return ()
+--                putStrLn "Done."
+--                print result
+                           
 -----------------------------TEST CASE 14 -----------------------------------------------------
 
 --main = let prog = N_App 
