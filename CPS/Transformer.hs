@@ -68,29 +68,104 @@ cpsTransExp (Annotated_F (BLam name e) tp) cont                = case tp of
                                                                                           let exp = (N_Fix functionName [name] [(varName, c_tp)] cps_e)
                                                                                           return ( N_App cont [] [(Annotated_V exp exp_tp)] ) 
                                                                                   )
-cpsTransExp (Annotated_F (App e1 e2) tp) cont                  =  do 
-                                                                     tenv <- gets tCheckEnv
-                                                                     funcID <- gets funcNameID
-                                                                     varEnvironment <- gets varEnv
-                                                                     varID <- gets varNameID
-                                                                     let e1_tp = fromJust (tCheck e1 tenv)
-                                                                         e2_tp = fromJust (tCheck e2 tenv)
-                                                                         functionName_1 = "Lam_" ++ show funcID
-                                                                         functionName_2 = "Lam_" ++ show (funcID + 1)
-                                                                         varName_1 = "Var_" ++ show varID
-                                                                         varName_2 = "Var_" ++ show (varID + 1)
-                                                                         u1 = Annotated_F e1 e1_tp
-                                                                         u2 = Annotated_F e2 e2_tp
-                                                                         u1_cont = cpsTransCont e1_tp
-                                                                         u2_cont = cpsTransCont e2_tp
-                                                                         x1_tp   = cpsTransType e1_tp
-                                                                         x2_tp   = cpsTransType e2_tp
-                                                                         lam_x2  = N_Fix functionName_2 [] [(varName_2, x2_tp)] (N_App (Annotated_V (N_Var varName_1) x1_tp) [] [(Annotated_V (N_Var varName_2) x2_tp), cont])
-                                                                     modify (\s -> s {varNameID = varID + 2,funcNameID = funcID + 2, varEnv = (varName_1, x1_tp) : (varName_2, x2_tp) : varEnvironment})
-                                                                     cps_lam_x2 <- cpsTransExp u2 (Annotated_V lam_x2 u2_cont)
-                                                                     --cpsTransExp u2 (Annotated_V lam_x2 u2_cont)
-                                                                     let lam_x1  = N_Fix functionName_1 [] [(varName_1, x1_tp)] cps_lam_x2
-                                                                     cpsTransExp u1 (Annotated_V lam_x1 u1_cont)
+
+cpsTransExp (Annotated_F (App e1 e2) tp) cont                  =  case (isSerious e1, isSerious e2) of 
+                                                                        (True, True) -> do 
+                                                                                         tenv <- gets tCheckEnv
+                                                                                         funcID <- gets funcNameID
+                                                                                         varEnvironment <- gets varEnv
+                                                                                         varID <- gets varNameID
+                                                                                         let e1_tp = fromJust (tCheck e1 tenv)
+                                                                                             e2_tp = fromJust (tCheck e2 tenv)
+                                                                                             functionName_1 = "Lam_" ++ show funcID
+                                                                                             functionName_2 = "Lam_" ++ show (funcID + 1)
+                                                                                             varName_1 = "Var_" ++ show varID
+                                                                                             varName_2 = "Var_" ++ show (varID + 1)
+                                                                                             u1 = Annotated_F e1 e1_tp
+                                                                                             u2 = Annotated_F e2 e2_tp
+                                                                                             u1_cont = cpsTransCont e1_tp
+                                                                                             u2_cont = cpsTransCont e2_tp
+                                                                                             x1_tp   = cpsTransType e1_tp
+                                                                                             x2_tp   = cpsTransType e2_tp
+                                                                                             lam_x2  = N_Fix functionName_2 [] [(varName_2, x2_tp)] (N_App (Annotated_V (N_Var varName_1) x1_tp) [] [(Annotated_V (N_Var varName_2) x2_tp), cont])
+                                                                                         modify (\s -> s {varNameID = varID + 2,funcNameID = funcID + 2, varEnv = (varName_1, x1_tp) : (varName_2, x2_tp) : varEnvironment})
+                                                                                         cps_lam_x2 <- cpsTransExp u2 (Annotated_V lam_x2 u2_cont)
+                                                                                         --cpsTransExp u2 (Annotated_V lam_x2 u2_cont)
+                                                                                         let lam_x1  = N_Fix functionName_1 [] [(varName_1, x1_tp)] cps_lam_x2
+                                                                                         cpsTransExp u1 (Annotated_V lam_x1 u1_cont)
+
+                                                                        (True, False) -> do 
+                                                                                             tenv <- gets tCheckEnv
+                                                                                             funcID <- gets funcNameID
+                                                                                             varEnvironment <- gets varEnv
+                                                                                             varID <- gets varNameID
+                                                                                             let e1_tp = fromJust (tCheck e1 tenv)
+                                                                                                 e2_tp = fromJust (tCheck e2 tenv)
+                                                                                                 u1 = Annotated_F e1 e1_tp
+                                                                                                 u2 = Annotated_F e2 e2_tp
+                                                                                                 x_tp = cpsTransType e1_tp
+                                                                                                 u1_cont = cpsTransCont e1_tp
+                                                                                                 functionName = "Lam_" ++ show funcID
+                                                                                                 varName = "Var_" ++ show varID
+                                                                                             modify (\s -> s {varNameID = varID + 1,funcNameID = funcID + 1, varEnv = (varName, x_tp) : varEnvironment})
+                                                                                             t1 <- cpsTransTrivial u2 
+                                                                                             let lam_x = N_Fix functionName [] [(varName, x_tp)] (N_App (Annotated_V (N_Var varName) x_tp) [] [t1, cont]) 
+                                                                                             cpsTransExp u1 (Annotated_V lam_x u1_cont)
+
+                                                                        (False, True) -> do 
+                                                                                             tenv <- gets tCheckEnv
+                                                                                             funcID <- gets funcNameID
+                                                                                             varEnvironment <- gets varEnv
+                                                                                             varID <- gets varNameID
+                                                                                             let e1_tp = fromJust (tCheck e1 tenv)
+                                                                                                 e2_tp = fromJust (tCheck e2 tenv)
+                                                                                                 u1 = Annotated_F e1 e1_tp
+                                                                                                 u2 = Annotated_F e2 e2_tp
+                                                                                                 x_tp = cpsTransType e2_tp
+                                                                                                 u2_cont = cpsTransCont e2_tp
+                                                                                                 functionName = "Lam_" ++ show funcID
+                                                                                                 varName = "Var_" ++ show varID
+                                                                                             modify (\s -> s {varNameID = varID + 1,funcNameID = funcID + 1, varEnv = (varName, x_tp) : varEnvironment})
+                                                                                             t0 <- cpsTransTrivial u1 
+                                                                                             let lam_x = N_Fix functionName [] [(varName, x_tp)] (N_App t0 [] [(Annotated_V (N_Var varName) x_tp), cont]) 
+                                                                                             cpsTransExp u2 (Annotated_V lam_x u2_cont)
+
+                                                                        (False, False) ->  do 
+                                                                                             tenv <- gets tCheckEnv
+                                                                                             funcID <- gets funcNameID
+                                                                                             varEnvironment <- gets varEnv
+                                                                                             varID <- gets varNameID
+                                                                                             let e1_tp = fromJust (tCheck e1 tenv)
+                                                                                                 e2_tp = fromJust (tCheck e2 tenv)
+                                                                                                 u1 = Annotated_F e1 e1_tp
+                                                                                                 u2 = Annotated_F e2 e2_tp
+                                                                                             t0 <- cpsTransTrivial u1
+                                                                                             t1 <- cpsTransTrivial u2
+                                                                                             return (N_App t0 [] [t1,cont])
+
+--cpsTransExp (Annotated_F (App e1 e2) tp) cont                  =  do 
+--                                                                     tenv <- gets tCheckEnv
+--                                                                     funcID <- gets funcNameID
+--                                                                     varEnvironment <- gets varEnv
+--                                                                     varID <- gets varNameID
+--                                                                     let e1_tp = fromJust (tCheck e1 tenv)
+--                                                                         e2_tp = fromJust (tCheck e2 tenv)
+--                                                                         functionName_1 = "Lam_" ++ show funcID
+--                                                                         functionName_2 = "Lam_" ++ show (funcID + 1)
+--                                                                         varName_1 = "Var_" ++ show varID
+--                                                                         varName_2 = "Var_" ++ show (varID + 1)
+--                                                                         u1 = Annotated_F e1 e1_tp
+--                                                                         u2 = Annotated_F e2 e2_tp
+--                                                                         u1_cont = cpsTransCont e1_tp
+--                                                                         u2_cont = cpsTransCont e2_tp
+--                                                                         x1_tp   = cpsTransType e1_tp
+--                                                                         x2_tp   = cpsTransType e2_tp
+--                                                                         lam_x2  = N_Fix functionName_2 [] [(varName_2, x2_tp)] (N_App (Annotated_V (N_Var varName_1) x1_tp) [] [(Annotated_V (N_Var varName_2) x2_tp), cont])
+--                                                                     modify (\s -> s {varNameID = varID + 2,funcNameID = funcID + 2, varEnv = (varName_1, x1_tp) : (varName_2, x2_tp) : varEnvironment})
+--                                                                     cps_lam_x2 <- cpsTransExp u2 (Annotated_V lam_x2 u2_cont)
+--                                                                     --cpsTransExp u2 (Annotated_V lam_x2 u2_cont)
+--                                                                     let lam_x1  = N_Fix functionName_1 [] [(varName_1, x1_tp)] cps_lam_x2
+--                                                                     cpsTransExp u1 (Annotated_V lam_x1 u1_cont)
 
 cpsTransExp (Annotated_F (Fix name (n, n_tp) e tp) tp_fix) cont = do 
                                                                      varID <- gets varNameID
@@ -232,6 +307,29 @@ cpsTransExp (Annotated_F (If e1 e2 e3) tp) cont                   = do
                                                                       let lam_x = N_Fix functionName [] [(varName, x_tp)] (N_If (Annotated_V (N_Var varName) x_tp) (cps_rest_1) (cps_rest_2) ) 
                                                                           lam_x_tp = cpsTransCont e1_tp
                                                                       cpsTransExp (Annotated_F e1 e1_tp) (Annotated_V lam_x lam_x_tp)
+
+
+isSerious :: Exp -> Bool
+isSerious (Fix name (n, n_tp) e tp) = False
+isSerious (Var name) = False
+isSerious others = True
+
+cpsTransTrivial :: Annotated_F -> CPS_State Annotated_V
+cpsTransTrivial (Annotated_F (Var name) tp) = return (Annotated_V (N_Var name) (cpsTransType tp))
+cpsTransTrivial (Annotated_F (Fix name (n, n_tp) e tp) tp_fix) = do 
+                                                                     varID <- gets varNameID
+                                                                     varEnvironment <- gets varEnv
+                                                                     tenv <- gets tCheckEnv
+                                                                     let n_trans_tp  = cpsTransType n_tp
+                                                                         c_tp   = cpsTransCont tp
+                                                                         fix_tp = cpsTransType tp_fix
+                                                                         varName = "Var_" ++ show varID
+                                                                         new_tenv = (n, n_tp):(name, tp_fix): tenv
+                                                                     modify (\s -> s {varNameID = varID + 1, varEnv = (varName, c_tp) : varEnvironment, tCheckEnv = new_tenv })
+                                                                     let e_tp = fromJust (tCheck e new_tenv)
+                                                                     cps_e <- (cpsTransExp (Annotated_F e e_tp) (Annotated_V (N_Var varName) c_tp))
+                                                                     let fix_trans =   N_Fix name [] [(n, n_trans_tp),(varName, c_tp)] cps_e
+                                                                     return  (Annotated_V fix_trans fix_tp)
 
 cpsTransProg :: Annotated_F -> CPS_State N_Exp
 cpsTransProg (Annotated_F e e_tp) = do 
