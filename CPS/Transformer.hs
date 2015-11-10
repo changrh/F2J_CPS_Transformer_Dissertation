@@ -389,7 +389,7 @@ convertNValue (d, g) = go
     go (Annotated_V (N_Lit lit) tp)  = C.Lit lit
     go (Annotated_V (N_Fix name tps ((v,v_tp):avs) exp) tp) =  if (length tps) == 0 then (C.Fix name v (\f n -> (let newMap = Map.insert name (C.Var name f) g
                                                                                                                      newMap' = Map.insert v (C.Var v n) newMap
-                                                                                                                  in (subCvrtFix avs (d,newMap')) )) (convertType d v_tp) (convertType d tp ))  else subCvrtBLam tps (d, g) where 
+                                                                                                                  in (subCvrtFix avs (d,newMap')) )) (convertType d v_tp) (convertType d N_Void ))  else subCvrtBLam tps (d, g) where 
                              subCvrtFix avs (d, newMap') = case avs of
                                                             [] -> convertNExp (d,newMap') exp
                                                             --(n, t):ys -> C.Lam n (convertType d t) (\x -> subCvrtLam ys (d, Map.insert n (C.Var n x) g)) 
