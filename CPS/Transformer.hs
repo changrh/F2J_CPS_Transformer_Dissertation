@@ -316,6 +316,24 @@ cpsTransExp (Annotated_F (If e1 e2 e3) tp) cont                   = do
                                                                       cpsTransExp (Annotated_F e1 e1_tp) (Annotated_V lam_x lam_x_tp)
 
 
+cpsTransExp (Annotated_F (Let (name, tp_name) e1 e2) tp) cont      = do 
+                                                                        tenv <- gets tCheckEnv
+                                                                        varID <- gets varNameID
+                                                                        funcID <- gets funcNameID
+                                                                        varEnvironment <- gets varEnv
+                                                                        let new_tenv = (name, tp_name):tenv
+                                                                            e1_tp = fromJust (tCheck e1 new_tenv)
+                                                                            e2_tp = fromJust (tCheck e2 new_tenv)
+                                                                            functionName = "Lam_" ++ show funcID
+                                                                            varName = "Var_" ++ show varID
+                                                                            x_tp = cpsTransType e1_tp
+                                                                        modify (\s -> s {varNameID = varID + 1,funcNameID = funcID + 1, varEnv = (varName, x_tp) : varEnvironment, tCheckEnv =  new_tenv})
+                                                                        cps_rest <- cpsTransExp (Annotated_F e2 e2_tp) cont
+                                                                        let lam_x_body = N_Let (Declare_V name (Annotated_V (N_Var varName) (x_tp))) cps_rest
+                                                                            lam_x = N_Fix functionName [] [(varName, x_tp)] lam_x_body
+                                                                            lam_x_cont = cpsTransCont tp
+                                                                        cpsTransExp (Annotated_F e1 e1_tp) (Annotated_V lam_x lam_x_cont)
+
 cpsTransExp (Annotated_F v v_tp) cont = error ("The expression should not be CPSed, Please Check ----> " ++ show v)
 
 

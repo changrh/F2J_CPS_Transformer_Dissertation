@@ -82,7 +82,7 @@ tCheck (App e1 e2) tenv           =
     (Just t1, Just t2) -> case t1 of 
                             Fun inType outType -> if inType == t2 then Just (outType) else Nothing
                             others -> error ("App Left is Not a Function Type! ----> App " ++ show e1 ++ "  " ++ show e2)
-    (Nothing, _) -> error "App Left Error Occurs!"
+    (Nothing, _) -> error ("App Left Error Occurs! ----> " ++ show e1 )
     (Just t1, Nothing) -> error "App Right Error Occurs!"
 
 

@@ -21,6 +21,8 @@ import           CPS.LambdaF
 import           CPS.LambdaK
 import           CPS.Transformer
 import qualified Src as S
+import qualified Core as C
+import qualified Data.Map as Map
 import Text.Printf
 import System.CPUTime
 
@@ -241,31 +243,31 @@ prog = N_App
 
 -----------------------------TEST CASE 4 -----------------------------------------------------
 --APP (lam x:int. (x + 3)) (Lit Int 3)
---main =  let prog = App (Fix "Add_two_ints" ("x", JClass "Int") (PrimOp (Var "x") (Arith J.Add) (Lit (Int 3))) (JClass "Int")) (Lit (Int 3))
+--main =  let prog = App (Fix "Add_two_ints" ("x", JClass "Int") (PrimOp (Var "x") (S.Arith J.Add) (Lit (S.Int 3))) (JClass "Int")) (Lit (S.Int 3))
 --            prog_tp = fromJust (tCheck prog [(" ", Unit)])
---        --in evaluate (runCPS $ cpsTransProg (Annotated_F  prog prog_tp)) [(" ", Annotated_V (N_Lit (Int 0)) (N_JClass "Int") )] [(" ", N_Unit)]
---        in (runCPS $ cpsTransProg (Annotated_F  prog prog_tp))
+        --in evaluate (runCPS $ cpsTransProg (Annotated_F  prog prog_tp)) [(" ", Annotated_V (N_Lit (S.Int 0)) (N_JClass "Int") )] 
+        --        in (runCPS $ cpsTransProg (Annotated_F  prog prog_tp))
 -----------------------------TEST CASE 5 -----------------------------------------------------
-main = let prog = (Fix "factorial" ("n", JClass "Int") 
-                        (If (Var "n")
-                            (Lit (S.Int 1))
-                            (PrimOp (Var "n") (S.Arith J.Mult) (App (Var "factorial") (PrimOp (Var "n") (S.Arith J.Sub) (Lit (S.Int 1))) ) ) 
-                        ) 
-                        (JClass "Int")
-                  )
-           runProg = App prog (Lit (S.Int 1000))
-           prog_tp = fromJust (tCheck runProg [(" ", Unit)])
+--main = let prog = (Fix "factorial" ("n", JClass "Int") 
+--                        (If (Var "n")
+--                            (Lit (S.Int 1))
+--                            (PrimOp (Var "n") (S.Arith J.Mult) (App (Var "factorial") (PrimOp (Var "n") (S.Arith J.Sub) (Lit (S.Int 1))) ) ) 
+--                        ) 
+--                        (JClass "Int")
+--                  )
+--           runProg = App prog (Lit (S.Int 300))
+--           prog_tp = fromJust (tCheck runProg [(" ", Unit)])
         --in evaluate (runCPS $ cpsTransProg (Annotated_F  runProg prog_tp) ) [(" ", Annotated_V (N_Lit (S.Int 9999)) (N_JClass "Int") )]
         --in fromJust (tCheck prog [(" ", Unit)])
         --in C.prettyExpr $ convertNExp (Map.empty, Map.empty) (runCPS $ cpsTransProg (Annotated_F  runProg prog_tp) )
         --in (runCPS $ cpsTransProg (Annotated_F  runProg prog_tp) )
-        in do
-            putStrLn "Starting..."
-            let result = (evaluate (runCPS $ cpsTransProg (Annotated_F  runProg prog_tp) ) [(" ", Annotated_V (N_Lit (S.Int 9999)) (N_JClass "Int") )])
-            time $ result `seq` return ()
-            putStrLn "Done."
-            print result
------------------------------TEST CASE 6 -----------------------------------------------------
+        --in do
+        --    putStrLn "Starting..."
+        --    let result = (evaluate (runCPS $ cpsTransProg (Annotated_F  runProg prog_tp) ) [(" ", Annotated_V (N_Lit (S.Int 9999)) (N_JClass "Int") )])
+        --    time $ result `seq` return ()
+        --    putStrLn "Done."
+        --    print result
+-------------------------------TEST CASE 6 -----------------------------------------------------
 --main = let prog = (If (Lit (Int 1)) (Lit (Int 2)) (Lit (Int 3)))
 --           prog_tp = fromJust (tCheck prog [(" ", Unit)])
 --        in evaluate  (runCPS $ cpsTransProg (Annotated_F  prog prog_tp) ) [(" ", Annotated_V (N_Lit (Int 0)) (N_JClass "Int") )] [(" ", N_Unit)]
@@ -325,10 +327,9 @@ main = let prog = (Fix "factorial" ("n", JClass "Int")
         --in fromJust (tCheck runProg [(" ", Unit)])
 -----------------------------TEST CASE 12 -----------------------------------------------------
 --App (TApp (/\A.\x:A.x) (JClass "Int") ) (Lit (Int 3))
---main = let prog = App (TApp (BLam "A" (Fix "Lam" ("x", TVar "A") (Var "x") (TVar "A") ) ) (JClass "Int")) (Lit (Int 3))
+--main = let prog = App (TApp (BLam "A" (Fix "Lam" ("x", TVar "A") (Var "x") (TVar "A") ) ) (JClass "Int")) (Lit (S.Int 3))
 --           prog_tp = fromJust (tCheck prog [(" ", Unit)])
---        in evaluate (runCPS $ cpsTransProg (Annotated_F prog prog_tp) ) [(" ", Annotated_V (N_Lit (Int 0)) (N_JClass "Int") )] [(" ", N_Unit)]
-
+--        in evaluate (runCPS $ cpsTransProg (Annotated_F prog prog_tp) ) [(" ", Annotated_V (N_Lit (S.Int 0)) (N_JClass "Int") )]
 -----------------------------TEST CASE 13 -----------------------------------------------------
 --main = let fact = (N_Fix 
 --                        "f"
@@ -507,3 +508,54 @@ main = let prog = (Fix "factorial" ("n", JClass "Int")
 
 
 
+-----------------------------TEST CASE 15 -----------------------------------------------------
+--main = let even = (Fix "Even" ("x", JClass "Int") 
+--                      (If (Var "x")
+--                        (Lit (S.Bool True))
+--                        (App (Var "Odd") (PrimOp (Var "x") (S.Arith J.Sub) (Lit (S.Int 1))) )
+--                      )
+--                      (JClass "Bool")
+--                  )
+--           odd = (Fix "Odd" ("y", JClass "Int") 
+--                      (If (Var "y")
+--                        (Lit (S.Bool False))
+--                        (App (Var "Even") (PrimOp (Var "y") (S.Arith J.Sub) (Lit (S.Int 1))) )
+--                      )
+--                      (JClass "Bool")
+--                  )
+--           prog = (Fix "EvenOdd" ("z", JClass "Int") 
+--                      (
+--                        ( Let ("m", Fun (JClass "Int") (JClass "Bool") ) odd
+--                          ( Let ("n", Fun (JClass "Int") (JClass "Bool") ) even
+--                              (App (Var "m") (Var "z") )
+--                          ) 
+--                        )
+--                      )
+--                      (JClass "Bool")
+--                  )
+--           runProg = App prog (Lit (S.Int 300))
+--           prog_tp = fromJust (tCheck runProg [(" ", Unit)])
+        --in do
+        --    putStrLn "Starting..."
+        --    let result = (evaluate (runCPS $ cpsTransProg (Annotated_F  runProg prog_tp) ) [(" ", Annotated_V (N_Lit (S.Int 9999)) (N_JClass "Int") )])
+        --    time $ result `seq` return ()
+        --    putStrLn "Done."
+        --    print result
+        --in (runCPS $ cpsTransProg (Annotated_F runProg prog_tp) )
+
+-----------------------------TEST CASE 16 -----------------------------------------------------
+--main = let plusOne = (Fix "Plusone" ("x", JClass "Int") 
+--                      ( Let ("y", JClass "Int") (PrimOp (Var "x") (S.Arith J.Add) (Lit (S.Int 1)))
+--                        (Var "y")
+--                      )
+--                      (JClass "Int")
+--                  )
+--           runProg = App plusOne (Lit (S.Int 300))
+--           prog_tp = fromJust (tCheck runProg [(" ", Unit)])
+       --in (runCPS $ cpsTransProg (Annotated_F runProg prog_tp) )
+        --in do
+        --    putStrLn "Starting..."
+        --    let result = (evaluate (runCPS $ cpsTransProg (Annotated_F  runProg prog_tp) ) [(" ", Annotated_V (N_Lit (S.Int 9999)) (N_JClass "Int") )])
+        --    time $ result `seq` return ()
+        --    putStrLn "Done."
+        --    print result
