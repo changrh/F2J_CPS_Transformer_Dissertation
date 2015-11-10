@@ -61,8 +61,8 @@ substitute (Unit) (n, t) = Unit
 
 tbinary :: S.Operator -> Type -> Type -> Maybe Type
 tbinary (S.Arith _) (JClass t1) (JClass t2)  =  Just (JClass t1)
-tbinary (S.Compare _) (JClass t1)  (JClass t2) = Just (JClass "Bool")
-tbinary (S.Logic _) (JClass "Bool")  (JClass "Bool")   = Just (JClass "Bool")
+tbinary (S.Compare _) (JClass t1)  (JClass t2) = Just (JClass "java.lang.Boolean")
+tbinary (S.Logic _) (JClass "java.lang.Boolean")  (JClass "java.lang.Boolean")   = Just (JClass "java.lang.Boolean")
 tbinary _ _ _ = error "tbinary Error Occurs!"
 
 tCheck :: Exp -> TEnv -> Maybe Type
@@ -71,10 +71,10 @@ tCheck (Var n) tenv             = lookup n tenv
 tCheck (Lit n) tenv             = 
   case n of 
     S.UnitLit -> Just Unit
-    S.Char t -> Just (JClass "Char")
-    S.Int t -> Just (JClass "Int")
-    S.String t -> Just (JClass "String")
-    S.Bool t -> Just (JClass "Bool")
+    S.Char t -> Just (JClass "java.lang.Character")
+    S.Int t -> Just (JClass "java.lang.Integer")
+    S.String t -> Just (JClass "java.lang.String")
+    S.Bool t -> Just (JClass "java.lang.Boolean")
 
 
 tCheck (App e1 e2) tenv           = 
@@ -111,12 +111,12 @@ tCheck (PrimOp e1 op e2) tenv   =
 tCheck (If p e1 e2) tenv        =
   case tCheck p tenv of
     Nothing -> error ("If Error occurs " ++ show p)
-    Just (JClass "Bool") -> case tCheck e1 tenv of 
-                              Nothing -> error "If Bool Error Occurs!"
-                              Just t1 -> if (Just t1 == (tCheck e2 tenv)) then (Just t1) else (error "Error occured Bool") 
-    Just (JClass "Int") -> case tCheck e1 tenv of 
-                              Nothing -> error "If Int Error Occurs!"
-                              Just t1 -> if (Just t1 == (tCheck e2 tenv)) then (Just t1) else (error "Error occured Int")
+    Just (JClass "java.lang.Boolean") -> case tCheck e1 tenv of 
+                                              Nothing -> error "If Bool Error Occurs!"
+                                              Just t1 -> if (Just t1 == (tCheck e2 tenv)) then (Just t1) else (error "Error occured Bool") 
+    Just (JClass "java.lang.Integer") -> case tCheck e1 tenv of 
+                                              Nothing -> error "If Int Error Occurs!"
+                                              Just t1 -> if (Just t1 == (tCheck e2 tenv)) then (Just t1) else (error "Error occured Int")
     others -> error ("Error occurs in tCheck If ---> " ++ show p)
 
 tCheck (Proj index e) tenv        = 

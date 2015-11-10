@@ -23,9 +23,11 @@ import           CPS.Transformer
 import qualified Src as S
 import qualified Core as C
 import qualified Data.Map as Map
+import BackEnd(compileAO)
+import Language.Java.Pretty
 import Text.Printf
 import System.CPUTime
-
+import qualified Playground as P
 
 time :: IO t -> IO t
 time a = do
@@ -248,18 +250,20 @@ prog = N_App
         --in evaluate (runCPS $ cpsTransProg (Annotated_F  prog prog_tp)) [(" ", Annotated_V (N_Lit (S.Int 0)) (N_JClass "Int") )] 
         --        in (runCPS $ cpsTransProg (Annotated_F  prog prog_tp))
 -----------------------------TEST CASE 5 -----------------------------------------------------
---main = let prog = (Fix "factorial" ("n", JClass "Int") 
---                        (If (Var "n")
+--main = let prog = (Fix "factorial" ("n", JClass "java.lang.Integer") 
+--                        (If (PrimOp (Var "n") (S.Compare J.Equal) (Lit (S.Int 0)) ) 
 --                            (Lit (S.Int 1))
 --                            (PrimOp (Var "n") (S.Arith J.Mult) (App (Var "factorial") (PrimOp (Var "n") (S.Arith J.Sub) (Lit (S.Int 1))) ) ) 
 --                        ) 
---                        (JClass "Int")
+--                        (JClass "java.lang.Integer")
 --                  )
 --           runProg = App prog (Lit (S.Int 300))
 --           prog_tp = fromJust (tCheck runProg [(" ", Unit)])
         --in evaluate (runCPS $ cpsTransProg (Annotated_F  runProg prog_tp) ) [(" ", Annotated_V (N_Lit (S.Int 9999)) (N_JClass "Int") )]
         --in fromJust (tCheck prog [(" ", Unit)])
         --in C.prettyExpr $ convertNExp (Map.empty, Map.empty) (runCPS $ cpsTransProg (Annotated_F  runProg prog_tp) )
+        --   (program, _ ) =  compileAO "First" $ convertNExp (Map.empty, Map.empty) (runCPS $ cpsTransProg (Annotated_F  runProg prog_tp) )
+        --in prettyPrint program
         --in (runCPS $ cpsTransProg (Annotated_F  runProg prog_tp) )
         --in do
         --    putStrLn "Starting..."
@@ -546,16 +550,24 @@ prog = N_App
 -----------------------------TEST CASE 16 -----------------------------------------------------
 --main = let plusOne = (Fix "Plusone" ("x", JClass "Int") 
 --                      ( Let ("y", JClass "Int") (PrimOp (Var "x") (S.Arith J.Add) (Lit (S.Int 1)))
---                        (Var "y")
+--                        (PrimOp (Var "y") (S.Arith J.Add) (Lit (S.Int 1)))
 --                      )
 --                      (JClass "Int")
 --                  )
 --           runProg = App plusOne (Lit (S.Int 300))
 --           prog_tp = fromJust (tCheck runProg [(" ", Unit)])
-       --in (runCPS $ cpsTransProg (Annotated_F runProg prog_tp) )
+--       in (runCPS $ cpsTransProg (Annotated_F runProg prog_tp) )
         --in do
         --    putStrLn "Starting..."
         --    let result = (evaluate (runCPS $ cpsTransProg (Annotated_F  runProg prog_tp) ) [(" ", Annotated_V (N_Lit (S.Int 9999)) (N_JClass "Int") )])
         --    time $ result `seq` return ()
         --    putStrLn "Done."
         --    print result
+
+-----------------------------TEST CASE 17 -----------------------------------------------------
+--main = let prog = P.factCPS 
+--           (program, _ ) =  compileAO "First" $ prog
+--        in prettyPrint program
+main = let prog = P.testcase5
+           (program, _ ) =  compileAO "First" $ prog
+        in prettyPrint program
