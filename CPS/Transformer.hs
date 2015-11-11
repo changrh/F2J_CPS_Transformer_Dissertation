@@ -408,7 +408,7 @@ convertNValue (d, g) = go
     go (Annotated_V (N_Lit lit) tp)  = C.Lit lit
     go (Annotated_V (N_Fix name tps ((v,v_tp):avs) exp) tp) =  if (length tps) == 0 then (C.Fix name v (\f n -> (let newMap = Map.insert name (C.Var name f) g
                                                                                                                      newMap' = Map.insert v (C.Var v n) newMap
-                                                                                                                  in (subCvrtFix avs (d,newMap')) )) (convertType d v_tp) (convertType d N_Void ))  else subCvrtBLam tps (d, g) where 
+                                                                                                                  in (subCvrtFix avs (d,newMap')) )) (convertType d v_tp) (convertType d (getOutType tp)))  else subCvrtBLam tps (d, g) where 
                              subCvrtFix avs (d, newMap') = case avs of
                                                             [] -> convertNExp (d,newMap') exp
                                                             --(n, t):ys -> C.Lam n (convertType d t) (\x -> subCvrtLam ys (d, Map.insert n (C.Var n x) g)) 
@@ -416,6 +416,10 @@ convertNValue (d, g) = go
                              subCvrtBLam tps (d, g) = case tps of
                                                             [] -> subCvrtFix avs (d,g)
                                                             (y:ys) -> C.BLam y (\x -> subCvrtBLam ys (Map.insert y x d, g))
+                             getOutType tp = case tp of 
+                                              (N_Forall args tps void) -> let (_, out) = splitAt 1 tps
+                                                                            in (N_Forall args out void)
+                                              others -> error ("N_Fix type must be Forall !!! ----> " ++ show others)
     go (Annotated_V (N_Tuple es) tp) = C.Tuple (map go es)
     go (Annotated_V (N_Fix name tps [] exp) tp) = error ("Nothing in N_Fix parameters !!! ---> " ++ show name ) 
 

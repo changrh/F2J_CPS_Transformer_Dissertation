@@ -161,7 +161,20 @@ testcase2 :: Expr t e
 testcase2 = App (fix (\f n -> Let "Var_1" (var n `mult` one) (\var_1 -> (App (fix (\f2 n2 -> (var n2 `mult` input) ) javaInt Unit) (var var_1) ) ) ) javaInt Unit )  input
 
 testcase3 :: Expr t e 
-testcase3 = App (App (fix (\f n -> lam funtype (\var_1 -> App (var var_1) input) ) javaInt Unit) input ) inital_continuation
+testcase3 = App (App (fix (\f n -> lam funtype (\var_1 -> App (var var_1) input) ) javaInt funtype2) input ) inital_continuation
+
+testcase4 :: Expr t e 
+testcase4 = App (App (fix (\func n -> 
+                              lam funtype (\var_1 -> 
+                                ((var func) `App` input) `App` 
+                                    (fix (\cont y -> 
+                                            App (var y) input) 
+                                     funtype Unit) ) ) 
+                        javaInt funtype2) 
+                      input) 
+                inital_continuation
+
+
 
 testcase5 :: Expr t e
 testcase5 = App (App (fix (\f n ->
@@ -178,7 +191,7 @@ testcase5 = App (App (fix (\f n ->
                                            ) 
                                     )  
                      ) 
-                      javaInt Unit) 
+                      javaInt funtype2) 
                 input) 
             inital_continuation
 
@@ -235,6 +248,7 @@ x `sub` y    = PrimOp x (S.Arith J.Sub) y
 x `mult` y   = PrimOp x (S.Arith J.Mult) y
 inital_continuation = fix (\initial var_0 -> (Lit S.UnitLit)) javaInt Unit
 funtype = Fun javaInt Unit
+funtype2 = Fun funtype Unit
 -- sf2c :: String -> IO (Expr t e)
 -- sf2c fname = do
 --   path <- {-"/Users/weixin/Project/systemfcompiler/compiler/"-} getCurrentDirectory

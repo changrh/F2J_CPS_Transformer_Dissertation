@@ -250,20 +250,20 @@ prog = N_App
         --in evaluate (runCPS $ cpsTransProg (Annotated_F  prog prog_tp)) [(" ", Annotated_V (N_Lit (S.Int 0)) (N_JClass "Int") )] 
         --        in (runCPS $ cpsTransProg (Annotated_F  prog prog_tp))
 -----------------------------TEST CASE 5 -----------------------------------------------------
---main = let prog = (Fix "factorial" ("n", JClass "java.lang.Integer") 
---                        (If (PrimOp (Var "n") (S.Compare J.Equal) (Lit (S.Int 0)) ) 
---                            (Lit (S.Int 1))
---                            (PrimOp (Var "n") (S.Arith J.Mult) (App (Var "factorial") (PrimOp (Var "n") (S.Arith J.Sub) (Lit (S.Int 1))) ) ) 
---                        ) 
---                        (JClass "java.lang.Integer")
---                  )
---           runProg = App prog (Lit (S.Int 300))
---           prog_tp = fromJust (tCheck runProg [(" ", Unit)])
+main = let prog = (Fix "factorial" ("n", JClass "java.lang.Integer") 
+                        (If (PrimOp (Var "n") (S.Compare J.Equal) (Lit (S.Int 0)) ) 
+                            (Lit (S.Int 1))
+                            (PrimOp (Var "n") (S.Arith J.Mult) (App (Var "factorial") (PrimOp (Var "n") (S.Arith J.Sub) (Lit (S.Int 1))) ) ) 
+                        ) 
+                        (JClass "java.lang.Integer")
+                  )
+           runProg = App prog (Lit (S.Int 300))
+           prog_tp = fromJust (tCheck runProg [(" ", Unit)])
         --in evaluate (runCPS $ cpsTransProg (Annotated_F  runProg prog_tp) ) [(" ", Annotated_V (N_Lit (S.Int 9999)) (N_JClass "Int") )]
         --in fromJust (tCheck prog [(" ", Unit)])
         --in C.prettyExpr $ convertNExp (Map.empty, Map.empty) (runCPS $ cpsTransProg (Annotated_F  runProg prog_tp) )
-        --   (program, _ ) =  compileAO "First" $ convertNExp (Map.empty, Map.empty) (runCPS $ cpsTransProg (Annotated_F  runProg prog_tp) )
-        --in prettyPrint program
+           (program, _ ) =  compileAO "First" $ convertNExp (Map.empty, Map.empty) (runCPS $ cpsTransProg (Annotated_F  runProg prog_tp) )
+        in prettyPrint program
         --in (runCPS $ cpsTransProg (Annotated_F  runProg prog_tp) )
         --in do
         --    putStrLn "Starting..."
@@ -568,6 +568,7 @@ prog = N_App
 --main = let prog = P.factCPS 
 --           (program, _ ) =  compileAO "First" $ prog
 --        in prettyPrint program
-main = let prog = P.testcase5
-           (program, _ ) =  compileAO "First" $ prog
-        in prettyPrint program
+--main = let prog = P.testcase5
+--           (program, _ ) =  compileAO "First" $ prog
+--        in prettyPrint program
+        --in C.prettyExpr P.testcase3
