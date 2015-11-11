@@ -404,7 +404,7 @@ convertType d (N_Forall ns tps void) = if (length ns) == 0 then subCvrtFun tps e
 convertNValue :: (TVarMap t, VarMap t e) -> Annotated_V -> C.Expr t e
 convertNValue (d, g) = go
   where 
-    go (Annotated_V (N_Var name) tp) = fromMaybe (error ("Error Occur when converting N_Var " ++ show name)) (Map.lookup name g)
+    go (Annotated_V (N_Var name) tp) = fromMaybe (error ("Error Occur when converting N_Var " ++ show name ++ show tp)) (Map.lookup name g)
     go (Annotated_V (N_Lit lit) tp)  = C.Lit lit
     go (Annotated_V (N_Fix name tps ((v,v_tp):avs) exp) tp) =  if (length tps) == 0 then (C.Fix name v (\f n -> (let newMap = Map.insert name (C.Var name f) g
                                                                                                                      newMap' = Map.insert v (C.Var v n) newMap
@@ -414,7 +414,9 @@ convertNValue (d, g) = go
                                                             --(n, t):ys -> C.Lam n (convertType d t) (\x -> subCvrtLam ys (d, Map.insert n (C.Var n x) g)) 
                                                             (n',t):ys -> C.Lam n' (convertType d t) (\x -> subCvrtFix ys (d, Map.insert n' (C.Var n' x) newMap'))
                              subCvrtBLam tps (d, g) = case tps of
-                                                            [] -> subCvrtFix avs (d,g)
+                                                            [] -> (C.Fix name v (\f n -> (let newMap = Map.insert name (C.Var name f) g
+                                                                                              newMap' = Map.insert v (C.Var v n) newMap
+                                                                                          in (subCvrtFix avs (d,newMap')) )) (convertType d v_tp) (convertType d (getOutType tp)))
                                                             (y:ys) -> C.BLam y (\x -> subCvrtBLam ys (Map.insert y x d, g))
                              getOutType tp = case tp of 
                                               (N_Forall args tps void) -> let (_, out) = splitAt 1 tps
