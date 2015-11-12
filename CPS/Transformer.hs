@@ -38,8 +38,8 @@ cpsTransType :: Type -> N_Type
 cpsTransType (TVar name)           = N_TVar name
 cpsTransType (JClass name)         = N_JClass name
 cpsTransType  Unit                 = N_Unit
-cpsTransType (Fun t1 t2)           = N_Forall [] [cpsTransType(t1), cpsTransCont(t2)] N_Void 
-cpsTransType (Forall name tp)      = N_Forall [name] [(cpsTransCont tp)] N_Void
+cpsTransType (Fun t1 t2)           = N_Forall [] [cpsTransType(t1), cpsTransCont(t2)] (cpsTransType t2) 
+cpsTransType (Forall name tp)      = N_Forall [name] [(cpsTransCont tp)] (cpsTransType tp)
 cpsTransType (TupleType (x:xs))    = N_TupleType ((cpsTransType x) : subList xs)
                                         where subList xs = case xs of 
                                                                 [] -> []
@@ -48,7 +48,7 @@ cpsTransType (TupleType [])        = error ("TupleType is empty !!!")
 
 
 cpsTransCont :: Type -> N_Type
-cpsTransCont tp = N_Forall [] [(cpsTransType tp)] N_Void
+cpsTransCont tp = N_Forall [] [(cpsTransType tp)] (cpsTransType tp)
 
 cpsTransExp :: Annotated_F -> Annotated_V -> CPS_State N_Exp
 cpsTransExp (Annotated_F (Var name) tp) cont                   = return ( N_App cont [] [(Annotated_V (N_Var name) (cpsTransType tp))] ) 
@@ -313,7 +313,7 @@ cpsTransExp (Annotated_F (If e1 e2 e3) tp) cont                   = do
                                                                       cps_rest_1 <- cpsTransExp (Annotated_F e2 e2_tp) cont
                                                                       cps_rest_2 <- cpsTransExp (Annotated_F e3 e3_tp) cont
                                                                       let lam_x = N_Fix functionName [] [(varName, x_tp)] (N_If (Annotated_V (N_Var varName) x_tp) (cps_rest_1) (cps_rest_2) ) 
-                                                                          lam_x_tp = cpsTransCont e1_tp
+                                                                          lam_x_tp = cpsTransCont e2_tp
                                                                       cpsTransExp (Annotated_F e1 e1_tp) (Annotated_V lam_x lam_x_tp)
 
 
@@ -377,6 +377,7 @@ cpsTransProg (Annotated_F e e_tp) = do
                                           initial_contination = N_Fix functionName [] [(varName, x_tp)] (N_Halt (Annotated_V (N_Var varName) x_tp) )
                                       modify (\s -> s {varNameID = varID + 1,funcNameID = funcID + 1, varEnv = (varName, x_tp) : varEnvironment})
                                       cpsTransExp (Annotated_F e e_tp) (Annotated_V initial_contination intial_cont_tp)
+
 
 runCPS :: CPS_State N_Exp -> N_Exp
 runCPS x = evalState x initial_state
@@ -446,11 +447,11 @@ convertNExp (d, g) = go
                             in 
                                 if (length tps) == 0 then subCvrtApp app_left avs else subCvrtTApp app_left tps
                                     where subCvrtApp app_left avs = case avs of 
-                                                                        [] ->  app_left
-                                                                        (y:ys) -> let tmp = (convertNValue (d,g) y)
-                                                                                  in subCvrtApp (C.App app_left tmp) ys
+                                                                         [] ->  app_left
+                                                                         (y:ys) -> let tmp = (convertNValue (d,g) y)
+                                                                                   in subCvrtApp (C.App app_left tmp) ys
                                           subCvrtTApp app_left tps = case tps of 
                                                                           [] -> subCvrtApp app_left avs
                                                                           (y:ys) -> let tmp = convertType d y
                                                                                     in subCvrtTApp (C.TApp app_left tmp) ys 
-    go (N_Halt av) = C.Lit (S.UnitLit)
+    go (N_Halt av) = (convertNValue (d,g) av) 
