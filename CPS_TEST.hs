@@ -23,7 +23,7 @@ import           CPS.Transformer
 import qualified Src as S
 import qualified Core as C
 import qualified Data.Map as Map
-import BackEnd(compileAO)
+import BackEnd(compileAO, compileSN)
 import Language.Java.Pretty
 import Text.Printf
 import System.CPUTime
@@ -250,20 +250,20 @@ prog = N_App
         --in evaluate (runCPS $ cpsTransProg (Annotated_F  prog prog_tp)) [(" ", Annotated_V (N_Lit (S.Int 0)) (N_JClass "Int") )] 
         --        in (runCPS $ cpsTransProg (Annotated_F  prog prog_tp))
 -----------------------------TEST CASE 5 -----------------------------------------------------
-main = let prog = (Fix "factorial" ("n", JClass "java.lang.Integer") 
-                        (If (PrimOp (Var "n") (S.Compare J.Equal) (Lit (S.Int 0)) ) 
-                            (Lit (S.Int 1))
-                            (PrimOp (Var "n") (S.Arith J.Mult) (App (Var "factorial") (PrimOp (Var "n") (S.Arith J.Sub) (Lit (S.Int 1))) ) ) 
-                        ) 
-                        (JClass "java.lang.Integer")
-                  )
-           runProg = App prog (Lit (S.Int 1000))
-           prog_tp = fromJust (tCheck runProg [(" ", Unit)])
+--main = let prog = (Fix "factorial" ("n", JClass "java.lang.Integer") 
+--                        (If (PrimOp (Var "n") (S.Compare J.Equal) (Lit (S.Int 0)) ) 
+--                            (Lit (S.Int 1))
+--                            (PrimOp (Var "n") (S.Arith J.Mult) (App (Var "factorial") (PrimOp (Var "n") (S.Arith J.Sub) (Lit (S.Int 1))) ) ) 
+--                        ) 
+--                        (JClass "java.lang.Integer")
+--                  )
+--           runProg = App prog (Lit (S.Int 1000))
+--           prog_tp = fromJust (tCheck runProg [(" ", Unit)])
         --in evaluate (runCPS $ cpsTransProg (Annotated_F  runProg prog_tp) ) [(" ", Annotated_V (N_Lit (S.Int 9999)) (N_JClass "Int") )]
         --in fromJust (tCheck prog [(" ", Unit)])
-        in C.prettyExpr $ convertNExp (Map.empty, Map.empty) (runCPS $ cpsTransProg (Annotated_F  runProg prog_tp) )
-        --   (program, _ ) =  compileAO "First" $ convertNExp (Map.empty, Map.empty) (runCPS $ cpsTransProg (Annotated_F  runProg prog_tp) )
-        --in prettyPrint program
+        --in C.prettyExpr $ convertNExp (Map.empty, Map.empty) (runCPS $ cpsTransProg (Annotated_F  runProg prog_tp) )
+        --   (program, _ ) =  compileSN "First" $ convertNExp (Map.empty, Map.empty) (runCPS $ cpsTransProg (Annotated_F  runProg prog_tp) )
+        --in putStrLn $ prettyPrint program
         --in (runCPS $ cpsTransProg (Annotated_F  runProg prog_tp) )
         --in do
         --    putStrLn "Starting..."
@@ -335,13 +335,15 @@ main = let prog = (Fix "factorial" ("n", JClass "java.lang.Integer")
         --in fromJust (tCheck runProg [(" ", Unit)])
 -----------------------------TEST CASE 12 -----------------------------------------------------
 --App (TApp (/\A.\x:A.x) (JClass "Int") ) (Lit (Int 3))
---main = let prog = (BLam "A" (Fix "Lam" ("x", TVar "A") (Var "x") (TVar "A") ) ) 
---           prog_tp = fromJust (tCheck prog [(" ", Unit)])
+main = let prog = App (TApp (BLam "A" (Fix "Lam" ("x", TVar "A") (Var "x") (TVar "A") ) ) (JClass "java.lang.Integer")) (Lit (S.Int 1000))
+           prog_tp = fromJust (tCheck prog [(" ", Unit)])
         --in evaluate (runCPS $ cpsTransProg (Annotated_F prog prog_tp) ) [(" ", Annotated_V (N_Lit (S.Int 0)) (N_JClass "java.lang.Integer") )]
         --   (program, _ ) =  compileAO "First" $ convertNExp (Map.empty, Map.empty) (runCPS $ cpsTransProg (Annotated_F  prog prog_tp) )
         --in prettyPrint program
         --in (runCPS $ cpsTransProg (Annotated_F  prog prog_tp) )
         --in C.prettyExpr $ convertNExp (Map.empty, Map.empty) (runCPS $ cpsTransProg (Annotated_F  prog prog_tp) )
+           (program, _ ) =  compileSN "First" $ convertNExp (Map.empty, Map.empty) (runCPS $ cpsTransProg (Annotated_F  prog prog_tp) )
+        in putStrLn $ prettyPrint program
 
 -----------------------------TEST CASE 13 -----------------------------------------------------
 --main = let fact = (N_Fix 
@@ -582,3 +584,19 @@ main = let prog = (Fix "factorial" ("n", JClass "java.lang.Integer")
 --           (program, _ ) =  compileAO "First" $ prog
 --        in prettyPrint program
         --in C.prettyExpr P.testcase3
+-----------------------------TEST CASE 18 -----------------------------------------------------
+--main = let prog = (Fix "factorial" ("n", JClass "java.lang.Integer") 
+--                        (If (PrimOp (Var "n") (S.Compare J.Equal) (Lit (S.Int 0)) ) 
+--                            (Lit (S.Int 1))
+--                            (PrimOp (Var "n") (S.Arith J.Mult) (App (Var "factorial") (PrimOp (Var "n") (S.Arith J.Sub) (Lit (S.Int 1))) ) ) 
+--                        ) 
+--                        (JClass "java.lang.Integer")
+--                  )
+--           runProg = App prog (Lit (S.Int 100000))
+--           prog_tp = fromJust (tCheck runProg [(" ", Unit)])
+--           (program, _ ) =  compileSN "First" $ convertNExp (Map.empty, Map.empty) (runCPS $ cpsTransProg (Annotated_F  runProg prog_tp) )
+--        in putStrLn $ prettyPrint program
+-----------------Stack Overflow Version---------------------------
+--main = let prog = P.appFact
+--           (program, _ ) =  compileSN "First" $ prog
+--        in putStrLn $ prettyPrint program

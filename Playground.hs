@@ -113,6 +113,16 @@ fact = fix (\f n -> If (var n `eq` zero)
            javaInt
            javaInt
 
+
+appFact :: Expr t e 
+appFact = App (fix (\f n -> If (var n `eq` zero)
+                       one
+                       (var n `mult` (var f `App` (var n `sub` one))))
+           javaInt
+           javaInt) input
+
+
+
 factCPS :: Expr t e
 factCPS = App (App (fix (\f n -> 
                 lam funtype (\var_1 ->
