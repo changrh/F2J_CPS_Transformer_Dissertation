@@ -1,0 +1,11 @@
+\chapter{Introduction}
+
+A stack overflow problem occurs when the call stack pointer exceeds the stack bound. In Java, the call stack consists of a limited amount of address space and the most common cause of stack overflow is excessively deep or infinite recursion, in which a function calls itself so many times that the space needed to store the variables and other information is more than can fit on the stack. Currently, some compilers implement tail-call optimization, which turns every function call in the input program into a tail call together with some other optimizations, in order to get rid of this problem. 
+
+A tail call is a subroutine function call performed as the final action of a procedure. The main benefit of turning a non-tail function call into a tail call is that tail call can be implemented without adding a new stack frame to the call stack. This advantage enables compilers to reduce stack space from linear to constant when dealing with recursive or mutually recursive functions where the stack space and the number of returns saved can grow to be very significant.
+
+Continuation-Passing Style is a style of programming, in which control is passed explicitly in the form of a continuation. In a CPS-ed program, all function calls are tail calls and there is no implicit continuation. The continuation is explicitly passed in the program by taking an extra argument representing what should be done with the result the function is calculating. This approach exposes the semantics of the program and explicates the order of evaluation as well as the control flow, thus making the program easier to analyze. It is better summarized by Oliveira Danvy in [Paper Cite] that the transformation into continuation-passing style is an encoding of arbitrary lambda-terms into an evaluation-order-independent subset of the lambda calculus.
+
+In the University of Hong Kong (HKU for abbreviation later), the Programming Languages Group is developing a new JVM-based compiler for functional programming language called F2J. In current development, the compiler cannot automatically transform recursive programs into tail recursive ones. In this project, we will develop a typed Continuation-Passing Style transformation for the compiler with optimizations based on the language feature of F2J. 
+
+

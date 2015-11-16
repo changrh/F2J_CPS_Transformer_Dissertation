@@ -1,0 +1,163 @@
+\documentclass[12pt,a4paper,twoside]{report}
+
+\usepackage[T1]{fontenc}
+\usepackage{fontspec}
+\setmainfont{Palatino}
+\setmonofont[Scale=0.9]{Lucida Sans Typewriter}
+
+\usepackage[paperheight=297mm,paperwidth=210mm,
+left=25mm,top=25mm,bottom=25mm]{geometry}
+\usepackage{indentfirst}
+\usepackage{url}
+\usepackage{setspace}
+
+\usepackage{abstract}
+\usepackage{pdfpages}
+\usepackage{fancyhdr}
+\usepackage{setspace}
+\usepackage{listings}
+
+\usepackage[colorlinks=false]{hyperref}
+\usepackage{hypcap}
+
+\usepackage{amsmath}
+\usepackage{epigraph}
+\usepackage{amsthm}
+\newtheorem*{remark}{Remark}
+
+
+\newcommand\acknowledgements[1]{
+\thispagestyle{plain}on 
+\null\vfil
+\begin{center}{\huge{\textbf{Acknowledgements}} \par}\end{center}
+{\normalsize #1}
+\vfil\vfil\null
+}
+
+\newcommand\Declaration[1]{
+\thispagestyle{plain}
+\null\vfil
+\begin{center}{\huge\bf Declaration\par}\end{center}
+{\normalsize #1}
+\vfil\vfil\null
+}
+
+\setlength{\parskip}{0.5\baselineskip}
+\lstdefinelanguage{Lambda}{%
+  morekeywords={%
+    if,then,else,fix % keywords go here
+  },%
+  morekeywords={[2]int},   % types go here
+  otherkeywords={:}, % operators go here
+  literate={% replace strings with symbols
+    {->}{{$\to$}}{2}
+    {lambda}{{$\lambda$}}{0}
+    {lambdaO}{{$\overline{\lambda}$}}{0}
+    {lambdaU}{{$\underline{\lambda}$}}{0}
+    {atO}{{$\overline{@}$}}{0}
+    {atU}{{$\underline{@}$}}{0}
+  },
+  basicstyle={\ttfamily},
+  keywordstyle={\bfseries},
+  keywordstyle={[2]\itshape}, % style for types
+  keepspaces,
+  mathescape % optional
+}[keywords,comments,strings]%
+
+
+\title{CPS Transformation For F2J}
+\author{LIN Xiangru}
+\makeatletter
+\renewenvironment{abstract}
+{
+  \thispagestyle{empty}
+  \null
+  \begin{center}
+  \setlength{\parskip}{0pt}
+    {\normalsize \textbf{\@title} \par}
+    {\normalsize by \@author \par}
+    \bigskip
+   \vspace{2cm}
+    \setlength{\parskip}{0pt}
+    \bigskip
+    {\huge{\textit{Abstract}} \par}
+
+    \bigskip
+  \end{center}
+}
+
+\begin{document}
+
+\pagestyle{empty}
+
+% \maketitle
+
+\begin{titlepage}
+    \begin{center}
+        % \vspace*{1cm}
+        \includegraphics[width=0.3\textwidth]{imgs/HKU}
+
+        \large
+        The University of Hong Kong\\
+        Faculty of Engineering\\
+        Department of Computer Science\\
+
+        \vfill
+        \vspace{0.5cm}
+        COMP7704\\
+
+        \Huge
+        \@title\\
+
+        \vfill
+
+        \normalsize
+        Submitted in partial fulfillment of the requirements for the admission to the degree of Master of Science in Computer Science
+
+        \vfill
+
+        \normalsize
+        \quad by\\
+        \vspace{0.5cm}
+
+        \begin{tabular}{ccc}
+        LIN Xiangru \\
+        3035149348
+        \end{tabular}
+
+        \vspace{0.5cm}
+        \quad Supervised by\\
+        \quad Assistant Professor Bruno C. d. S. Oliveira\\
+
+        \vspace{0.5cm}
+        \normalsize
+        \quad \@date
+    \end{center}
+\end{titlepage}
+\clearpage
+
+\doublespacing
+
+\include{abstract}
+\clearpage
+
+\include{declaration}
+\clearpage
+
+\include{acknowledgement}
+\clearpage
+
+\tableofcontents
+\clearpage
+
+\pagestyle{plain}
+\setcounter{page}{1}
+
+\include{introduction}
+\include{analysis}
+
+\renewcommand{\bibname}{References}
+\bibliographystyle{plain}
+\bibliography{report}
+
+\end{document}

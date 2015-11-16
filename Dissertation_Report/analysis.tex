@@ -1,0 +1,76 @@
+\chapter{Literature Review}
+
+Continuation-Passing Style (hence forth called with the short form, CPS) is a style of programming sometimes employed in functional programming and it is different from direct programming. As Appel put it, "Continuation-Passing Style is a program notation that makes every aspect of control flow and data flow explicit." [Book Cite] In languages that have both first class functions and tail call optimizations, CPS makes it possible to throw away stack completely and only use continuations. This might actually make the traditional function and function calls much simpler, because two operations, call and return, are replaced by "goto with arguments". Nowadays, some programming languages have already adopted this technique or provided relevant CPS modules, such as stackless Python, Scheme and Haskell. In order to design our own CPS transformation for F2J, we have conducted a series literature reviews in corresponding topics.
+
+\section{The Origin of CPS Transformation}
+
+The first topic is the origin of continuation and CPS. Continuations and CPS share a long history and it is said that continuations or closely related concepts were first discovered in 1964 by Adriaan Van Wijngaarden [Paper Cite]. However, the CPS transformation was first formalized in 1975 by Gorden D. Plotkin. In his paper [Paper Cite], he studies the relationship between call-by-value and call-by-name in the setting of lambda calculus by setting up a programming language together with a formal calculus for each calling mechanism. Then, he proves that either call-by-value or call-by-name programming languages can be simulated using the other. Besides, in the simulation process, the notion of continuation-passing is defined with concrete proofs and used to provide denotational semantics for languages with call-by-value and to give definitional interpreters whose defined languages are independent of evaluation order of the defining language. 
+
+An advantage of Plotkin's CPS transformation is that full beta-reduction is sound. For example, beta-reduction cannot be applied to 
+\begin{lstlisting}[language=Lambda]
+	(lambda x. 0) (f y) 
+\end{lstlisting}
+because (f y) may have a side-effect or fail to terminate, but its CPS term:
+\begin{lstlisting}[language=Lambda]
+	(f y) (lambda z. (lambda x. lambda k. k 0) z k) 
+\end{lstlisting}
+can be reduced without prejudice. Besides, assigning useful names to all intermediate computations and control points enables further optimizations to the translation.
+
+\section{Remove Administrative Redexes}
+
+However, one apparent drawback is that direct implementation of Plotkin's CPS transformation as a rewriting system yields too many extraneous redexes known as "administrative redexes" and they need to be contracted in a second phase. These redexes interfere both with proving the correctness of a CPS transformation and with using it in a compiler. For example, Let's consider the term (@ is just a syntatic representation of Application):
+\begin{lstlisting}[language=Lambda]
+	lambda f. lambda x. lambda y. @ (@ f y) x
+\end{lstlisting}
+
+In Plotkin's CPS transformation, the result is:
+
+\begin{lstlisting}[language=Lambda]
+	lambda k$\textsubscript{1}$.@k$\textsubscript{1}$(lambda f. lambda k$\textsubscript{2}$. @k$\textsubscript{2}$(lambda x. lambda k$\textsubscript{3}$. @k$\textsubscript{3}$(lambda y. lambda k$\textsubscript{4}$. @(lambda k$\textsubscript{5}$. @(lambda k$\textsubscript{6}$. @k$\textsubscript{6}$ f)
+		(lambda m. @(lambda k$\textsubscript{7}$. @k$\textsubscript{7}$ y)(lambda n. @(@ m n) k$\textsubscript{5}$))) (lambda m. @(lambda k$\textsubscript{8}$. @k$\textsubscript{8}$ x)
+			(lambda n. @(@ m n) k$\textsubscript{4}$)))))
+\end{lstlisting}
+After a second phase of post-reduction, the output term is:
+
+\begin{lstlisting}[language=Lambda]
+	lambda k$\textsubscript{1}$.@k$\textsubscript{1}$(lambda f. lambda k$\textsubscript{2}$. @k$\textsubscript{2}$(lambda x. lambda k$\textsubscript{3}$. @k$\textsubscript{3}$(lambda y. lambda k$\textsubscript{4}$. @(@ f y)
+		(lambda m. @(@ m x) k$\textsubscript{4}$))))
+\end{lstlisting}
+
+This leads to our second topic optimizations to CPS transformation. One optimization is about reducing administrative redexes. In 1992, Olivier Danvy and Andrzej Filinski analyzed Fischer and Plotkin's two pass CPS transformation and concludes that all of the artificial administrative redexes, in fact, can be reduced to a manageable size [Paper Cite]. Here two pass means the first pass is to perform the CPS translation that introduces all the redexes and the second pass is to perform a post-reduction for the translated term. Then, they give detailed explanation about when and where the administrative redexes are created and suggest a way to alter the transformation with meaning-preserving transformation to make the construction of redexes context-independent. To be more specific, they decide if a redex in the original CPS term cannot be directly beta-reduced without considering the context, then the term is eta-expanded to make it context-independent. Besides, they use underlines and overlines to distinguish whether a term should be part of the transformed output term or it should be reduced during transformation. Let's continue the example above, this time we use Danvy's CPS transformation and the transformed term is:
+\begin{lstlisting}[language=Lambda]
+	lambdaO k$\textsubscript{1}$. atU k$\textsubscript{1}$(lambdaU f. lambdaU k$\textsubscript{2}$. atO (lambdaO k$\textsubscript{3}$. atU k$\textsubscript{3}$ (lambdaU x. lambdaU k$\textsubscript{4}$. atO (lambdaO k$\textsubscript{5}$. atU k$\textsubscript{5}$ (lambdaU y. lambdaU k$\textsubscript{6}$. 
+	atO (lambdaO k$\textsubscript{7}$. atO (lambdaO k$\textsubscript{8}$. atO (lambdaO k$\textsubscript{10}$ atO (k$\textsubscript{10}$) f) (lambdaO m$\textsubscript{2}$. atO (lambdaO k$\textsubscript{11}$. atO (k$\textsubscript{11}$) y) (lambdaO n$\textsubscript{2}$. 
+	atU ( atU (m$\textsubscript{2}$) (n$\textsubscript{2}$)) (lambdaU a. atO (k$\textsubscript{8}$) a)))) (lambda m$\textsubscript{1}$. atO (lambdaO k$\textsubscript{9}$. atO (k$\textsubscript{9}$) x) (lambdaO n$\textsubscript{1}$. 
+	atU ( atU (m$\textsubscript{1}$) (n$\textsubscript{1}$)) (k$\textsubscript{7}$)))) k$\textsubscript{6}$)) k$\textsubscript{4}$)) k$\textsubscript{2}$)
+\end{lstlisting}
+
+The above term is an intermediate representation of the algorithm's output. Then, let's apply beta-reduction to the intermediate terms, the result is:
+
+\begin{lstlisting}[language=Lambda]
+	lambdaO k$\textsubscript{1}$. atU k$\textsubscript{1}$(lambdaU f. lambdaU k$\textsubscript{2}$. atU (k$\textsubscript{2}$) (lambdaU x. lambdaU k$\textsubscript{4}$. atU k$\textsubscript{4}$ (lambdaU y. (lambdaU k$\textsubscript{6}$. atU ( atU f y) 
+		(lambdaU a. atU ( atU a x) k$\textsubscript{6}$)))))
+\end{lstlisting}
+
+From above, the algorithm computes a result that is eta-beta-equivalent to the original Fischer/Plotkin transformation and the transformation is one-pass. Besides, they extend the CPS terms to a broader range such as let and letrec and introduce two delimited control operators, namely shift and reset which allow to capture a delimited continuation. In general, they develop a notion that transforming lambda terms into CPS can be expressed in one pass by moving administrative redexes to translation time in a context-free way. 
+
+
+
+\section{First-Order CPS Transformation}
+
+Another optimization concerns simplifying transformation algorithm. Since the one-pass CPS transformations are either higher-order or non-compositional, it is still complicated to prove their correctness. Therefore, a first-order one-pass CPS transformation is introduced by Danvy in the paper [Paper Cite]. He shows the derivations from higher-order one-pass compositional, first-order one-pass non-compositional and first-order two-pass compositional to the proposed transformation. In higher-order CPS, terms appeared in tail position and non-tail position are treated differently and the only difference is the elimination of trivial eta-redexes in tail positon. Then, by replacing the eta-expanded term in non-tail position with the result of the eta-expansion of that term, it simplifies the control flow of the transformation, making every computation in the CPS transformation fully applied and thus, converting it from higher-order to first-order. Let's continue the example we used above, we convert the original term to a first order CPS one and the result is:
+\begin{lstlisting}[language=Lambda]
+	lambda k$\textsubscript{1}$.@k$\textsubscript{1}$(lambda f. lambda k$\textsubscript{2}$. @k$\textsubscript{2}$(lambda x. lambda k$\textsubscript{3}$. @k$\textsubscript{3}$(lambda y. lambda k$\textsubscript{4}$. @(f y) (lambda x$\textsubscript{0}$. 
+		@(@ x$\textsubscript{0}$ x) k$\textsubscript{4}$))))
+\end{lstlisting}
+
+From the result, it is obvious that every term is fully applied and the algorithm is much simpler but the result is the same. Then, in two-pass CPS, performing colon translation together with CPS transformation is able to remove all administrative redexes in one-pass and in non-compositional CPS, unfolding the transformation of non-compositional serious terms according to the proposed transformation rules makes the resulted transformation compositional.
+
+\section{More Optimizations to CPS Transformation}
+
+Moreover, Andrew Kennedy proposed a more compact CPS transformation algorithm based on previous optimizations in paper [Paper Cite]. He concludes that the transformation for tail function applications introduces extraneous eta-redexes for continuations and the transformation for case duplicates the context. Then, his algorithm avoids both these problems by introducing a join point continuation as well as an alternative translation function that takes an explicit continuation variable as argument instead of a context.
+
+\section{Typed CPS Transformation}
+
+The last topic we discuss is about typing property of CPS transformation. System F is a typed lambda calculus and performing CPS transformation for typed lambda calculus is a little bit different because it should consider the relation between the type of a term and the type of its CPS transform. In the paper [Paper Cite], it introduces a typed CPS transformation as an intermediate process when trying to convert System F to typed assembly language (TAL). This typed CPS is based on the work done by Harper and Lillibrige, who presented a systematic study of the typing properties of CPS conversion for system F. In their study, they compare the typing properties of CPS transformation under two classes of evaluation strategies for System F, namely standard strategy where type abstractions are values and type applications are significant evaluation steps and "ML-like" strategy where evaluation proceeds beneath type abstractions. They prove that the standard strategies - both call-by-name and call-by-value - admit faithful, type preserving transformations into CPS and are semantically unproblematic.
+
