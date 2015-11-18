@@ -1,0 +1,17 @@
+As has been analyzed, the overall transformation involves two stages: from our original language λF to CPS-ed intermediary language λK, and from λK to the target language defined in Core.hs
+
+(1) λF to λK
+
+In the first stage of CPS transformation, program in our source language λF, is converted to λK, in CPS form. This stage names all intermediate computations and eliminates the need for a control stack. All unconditional control transfers, including function invocation and return, are achieved via function call. The target calculus, λK, is of the following form (Adopted from Karl Crary and Neal Glew [1]):
+
+
+The CPS translation that takes λF to λK is based on that of Karl Crary and Neal Glew [1] and appears in Figure X. The type translation is written K[ · ]. The principal translation for terms, Kexp[e], takes a continuation k, computes the value of e and hands that value to k. A second term translation for full programs, Kprog[e], calls the principal translation with a special top-level continuation that accepts a final answer and halts. In the translation, the variables c and x are assumed to be fresh in order to avoid variable capture. 
+A few optimization is done to eliminate unnecessary terms. E.g. …
+
+
+(2) Transform to Core.hs
+
+In the second stage of CPS transformation, program in CPS form in Lambda K will be transformed to our language defined in Core.hs, for further compilation process. The transformation rules are as follow:
+
+After the two stage of transformation, the program is now in CPS-formed Core.hs.
+
